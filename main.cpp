@@ -1,5 +1,6 @@
 #include <iostream>
 #import<cmath>
+#include <queue>
 # include "csv.h"
 using namespace std;
 
@@ -26,7 +27,14 @@ struct dist_comparator
 };
 
 
+void DBSCRN_expand_cluster(int i, int k, int i1);
+
+int get_cluster_of_nearest_core_point(int point, const vector<int>& vector);
+
 vector<point> points;
+int clusters[100000] = {0};
+bool S_tmp_visited[100000] = {false};
+string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point& point, const struct point& other) {
     double dx = point.x - other.x;
@@ -67,7 +75,64 @@ void calculate_knn(int k){
     }
 }
 
+void DBSCRN(int k){
+    vector<int> S_non_core;
+    vector<int> S_core;
+    int cluster_number = 1;
+    for(int i=0; i<points.size(); i++){
+        if(points.at(i).rnn.size() < k) S_non_core.push_back(i);
+        else{
+            S_core.push_back(i);
+            int cluster_to_expand;
+            if(clusters[i] != 0) cluster_to_expand=clusters[i];
+            else{
+                cluster_to_expand = cluster_number;
+                cluster_number++;
+            }
+            DBSCRN_expand_cluster(i, k, cluster_to_expand);
+        }
+    }
+    for(int non_core_point : S_non_core){
+        clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
+    }
+}
 
+int get_cluster_of_nearest_core_point(int point, const vector<int>& vector) {
+//    TODO: calculate distances;
+    return -1;
+}
+
+void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
+    vector<int> S_tmp;
+
+    clusters[i] = cluster_number;
+    S_tmp.push_back(i);
+    S_tmp_visited[i] = true;
+    for(int j=0; j<S_tmp.size(); j++){
+        cout << "Processing" << S_tmp.at(j) << endl;
+        int y_k = S_tmp.at(j);
+        for(int y_j: points.at(y_k).rnn){
+            //TODO: change for math pi value
+            if(points.at(y_j).rnn.size() > 2*k/3.14){
+                cout << "point_id: " << y_j <<endl;
+               for(int p:points.at(y_j).rnn){
+                   if(!S_tmp_visited[p]){
+                       S_tmp_visited[p] = true;
+                       S_tmp.push_back(p);
+                       cout <<"added" << p << endl;
+                   }
+               }
+            }
+            cout << "processed: " << y_j << " vis: " << S_tmp_visited[y_j] << " clust: " << clusters[y_j] << endl;
+            if((!S_tmp_visited[y_j]) && (clusters[y_j] == 0)){
+                clusters[y_j] = cluster_number;
+                cout << "assigned " <<y_j << " -> " << cluster_number  << endl;
+            }
+        }
+    }
+//    Cleaning S_tmp_visited
+    for(int point_id:S_tmp)S_tmp_visited[point_id] = false;
+}
 
 int main(){
     int k, point_number, dimensions;
@@ -80,19 +145,23 @@ int main(){
         points.push_back(p);
     }
 
-    calculate_knn(3);
+    calculate_knn(k);
     for(int i=0; i<point_number; i++){
         point p = points.at(i);
         cout << endl;
-        cout << p.id << " " << p.x << " " << p.y << endl;
+        cout << letters[p.id] << " " << p.x << " " << p.y << endl;
         cout << "knn: ";
         for(int j : p.knn){
-            cout << j << " ";
+            cout << letters[j] << " ";
         }
         cout << endl << "rnn: ";
         for(int j : p.rnn){
-            cout << j << " ";
+            cout << letters[j] << " ";
         }
+    }
+    DBSCRN(k);
+    for(int i=0; i<point_number; i++){
+        cout << i << " " << clusters[i] << endl;
     }
 //    unsigned int n;
 //    io::CSVReader<n> in("../ram.csv");
