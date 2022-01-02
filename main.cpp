@@ -8,6 +8,8 @@ struct point {
     int id{};
     double x{};
     double y{};
+    bool isCore = true;
+    int distanceCalculationNumber = 0;
     vector<int> knn;
     vector<int> rnn;
 };
@@ -33,8 +35,8 @@ int get_cluster_of_nearest_core_point(int point, const vector<int>& vector);
 
 vector<point> points;
 int clusters[100000] = {0};
-bool S_tmp_visited[100000] = {false};
-string letters = "ABCDEFGHIJKL";
+const string SEPARATOR = ",";
+//string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point& point, const struct point& other) {
     double dx = point.x - other.x;
@@ -43,18 +45,15 @@ double calculate_distance(const point& point, const struct point& other) {
     return sqrt(dist);
 }
 
-vector<distance_x> calculate_distances_for_knn(int i, int k){
+vector<distance_x> calculate_distances_for_knn(point p, int distance_number){
     vector<distance_x> distances;
-    point p = points.at(i);
-    for(int j=0; j<points.size(); j++){
-        if(j!=i){
+    for(int j=0; j<distance_number; j++){
             point other = points.at(j);
             double dist = calculate_distance(p, other);
             distance_x distance;
             distance.id = j;
             distance.dist = dist;
             distances.push_back(distance);
-        }
     }
     return distances;
 }
@@ -63,7 +62,7 @@ vector<distance_x> calculate_distances_for_knn(int i, int k){
 
 void calculate_knn(int k){
     for(int i=0; i<points.size(); i++){
-        vector<distance_x> distances = calculate_distances_for_knn(i, k);
+        vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
         sort(distances.begin(), distances.end(), dist_comparator());
 //        cout << i << ":" << endl;
 //        for (distance_x j: distances) cout << j.id << ' ' << j.dist << endl;
@@ -73,6 +72,20 @@ void calculate_knn(int k){
             points.at(distances.at(j).id).rnn.push_back(i);
         }
     }
+}
+
+void calculate_knn_optimized(point p, int k){
+    point r;
+    r.x = 0;
+    r.y = 0;
+    vector<distance_x> distances  = calculate_distances_for_knn(r, points.size());
+    sort(distances.begin(), distances.end(), dist_comparator());
+    vector<distance_x> k_dist = calculate_distances_for_knn(p, k);
+    double radius = max_element(k_dist.begin(), k_dist.end(), dist_comparator())->dist;
+//    p_idx = find(distances.begin(), distances.end(), )
+//    while()
+    // calculate distances within border
+    // sort and return
 }
 
 void DBSCRN(int k){
@@ -93,6 +106,7 @@ void DBSCRN(int k){
         }
     }
     for(int non_core_point : S_non_core){
+        points.at(non_core_point).isCore = false;
         clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
     }
 }
@@ -107,31 +121,26 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 
     clusters[i] = cluster_number;
     S_tmp.push_back(i);
-    S_tmp_visited[i] = true;
     for(int j=0; j<S_tmp.size(); j++){
-        cout << "Processing" << S_tmp.at(j) << endl;
         int y_k = S_tmp.at(j);
+//        cout << "y_k: " << letters[y_k] << endl;
         for(int y_j: points.at(y_k).rnn){
             //TODO: change for math pi value
             if(points.at(y_j).rnn.size() > 2*k/3.14){
-                cout << "point_id: " << y_j <<endl;
+//                cout << "   y_j: " << letters[y_j] <<endl;
                for(int p:points.at(y_j).rnn){
-                   if(!S_tmp_visited[p]){
-                       S_tmp_visited[p] = true;
+                   if(std::find(S_tmp.begin(), S_tmp.end(), p) == S_tmp.end()){
                        S_tmp.push_back(p);
-                       cout <<"added" << p << endl;
+//                       cout <<"    added to S_tmp: " << letters[p] << endl;
                    }
                }
             }
-            cout << "processed: " << y_j << " vis: " << S_tmp_visited[y_j] << " clust: " << clusters[y_j] << endl;
-            if((!S_tmp_visited[y_j]) && (clusters[y_j] == 0)){
+            if(clusters[y_j] == 0){
                 clusters[y_j] = cluster_number;
-                cout << "assigned " <<y_j << " -> " << cluster_number  << endl;
+//                cout << "assigned " <<letters[y_j] << " -> " << cluster_number  << endl;
             }
         }
     }
-//    Cleaning S_tmp_visited
-    for(int point_id:S_tmp)S_tmp_visited[point_id] = false;
 }
 
 int main(){
@@ -145,23 +154,35 @@ int main(){
         points.push_back(p);
     }
 
+    point r;
+    r.x = 4.2;
+    r.y = 4;
+    vector<distance_x> distances  = calculate_distances_for_knn(r, points.size());
+    sort(distances.begin(), distances.end(), dist_comparator());
+//    for (distance_x j: distances) cout << letters[j.id] << ' ' << j.dist << endl;
+
+
     calculate_knn(k);
-    for(int i=0; i<point_number; i++){
-        point p = points.at(i);
-        cout << endl;
-        cout << letters[p.id] << " " << p.x << " " << p.y << endl;
-        cout << "knn: ";
-        for(int j : p.knn){
-            cout << letters[j] << " ";
-        }
-        cout << endl << "rnn: ";
-        for(int j : p.rnn){
-            cout << letters[j] << " ";
-        }
-    }
+//    for(int i=0; i<point_number; i++){
+//        point p = points.at(i);
+//        cout << endl;
+//        cout << p.id << " " << p.x << " " << p.y << endl;
+////        cout << "knn: ";
+//        for(int j : p.knn){
+////            cout << letters[j] << " ";
+//        }
+////        cout << endl << "rnn: ";
+//        for(int j : p.rnn){
+////            cout << letters[j] << " ";
+//        }
+//    }
     DBSCRN(k);
     for(int i=0; i<point_number; i++){
-        cout << i << " " << clusters[i] << endl;
+        cout << i << SEPARATOR
+        << points.at(i).x <<  SEPARATOR << points.at(i).y << SEPARATOR
+        << points.at(i).distanceCalculationNumber << SEPARATOR
+        << points.at(i).isCore << SEPARATOR
+        << clusters[i] << endl;
     }
 //    unsigned int n;
 //    io::CSVReader<n> in("../ram.csv");
