@@ -4,6 +4,7 @@ project(Clustering)
 set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 add_executable(Clustering main.cpp csv.h)
 
 INCLUDE_DIRECTORIES( /home/linuxbrew/.linuxbrew/Cellar/jsoncpp/1.9.4_1/include )
@@ -14,5 +15,5 @@ message("LIBRARIES = ${LIBRARIES}")
 
 
 TARGET_LINK_LIBRARIES(Clustering ${LIBRARIES})
-TARGET_LINK_LIBRARIES(Clustering jsoncpp)
+TARGET_LINK_LIBRARIES(Clustering boost_program_options)
 

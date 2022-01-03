@@ -9,8 +9,11 @@
 
 
 # include "csv.h"
-
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 using namespace std;
+
+
 
 struct point {
     int id{};
@@ -39,18 +42,21 @@ void DBSCRN_expand_cluster(int i, int k, int i1);
 
 int get_cluster_of_nearest_core_point(int point, const vector<int> &vector);
 
-Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases);
+Json::Value
+prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
+                   int point_number, int dimensions);
 
 void write_to_out_file(int point_number);
 
 void write_to_debug_file(int point_number);
 
-void write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases);
+void
+write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
+                    int point_number, int dimensions);
 
 vector<point> points;
 int clusters[100000] = {0};
 const string SEPARATOR = ",";
-//string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point &point, const struct point &other) {
     double dx = point.x - other.x;
@@ -156,19 +162,42 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
     const string clock_phases[] = {"read input file", "sort by reference point distances", "rnn calculation",
                                    "clustering", "stats calculation", "write output files", "total"};
-    start_time = clock();
 
-    int k, point_number, dimensions;
-    cin >> k >> point_number >> dimensions;
+    po::options_description desc("Allowed options");
+    desc.add_options()
+            ("help", "produce help message")
+            ("in_file", po::value<string>()->default_value("../datasets/example.txt"), "input filename") // TODO: change to example
+            ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
+            ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
+            ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
+            ("minPts", po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
+            ("optimized", po::value<bool>()->default_value(false), "run optimized version")
+            ;
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+        cout << desc << "\n";
+        return 1;
+    }
+
+    start_time = clock();
+    int k = vm["k"].as<int>();
+
+    ifstream InputFile(vm["in_file"].as<string>());
+    int point_number, dimensions;
+    InputFile >> point_number >> dimensions;
 //  TODO: update for more than 2 dimensions
     for (int i = 0; i < point_number; i++) {
         point p;
         p.id = i;
-        cin >> p.x >> p.y;
+        InputFile >> p.x >> p.y;
         points.push_back(p);
     }
     input_read_time = clock();
@@ -219,12 +248,15 @@ int main() {
     int number_of_phases = sizeof(clock_phases) / sizeof(*clock_phases);
     for (int i = 0; i < number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
 
-    write_to_stats_file(clock_phases, time_diffs, number_of_phases);
+    write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, point_number, dimensions);
 }
 
-void write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases) {
+void
+write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
+                    int point_number, int dimensions) {
     ofstream StatsFile("../stats_file");
-    Json::Value stats = prepare_stats_file(clock_phases, time_diffs, number_of_phases);
+    Json::Value stats = prepare_stats_file(clock_phases, time_diffs, number_of_phases, std::move(vm), point_number,
+                                           dimensions);
     StatsFile << stats;
     StatsFile.close();
 }
@@ -256,20 +288,22 @@ void write_to_out_file(int point_number) {
     OutFile.close();
 }
 
-Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases) {
+Json::Value
+prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
+                   int point_number, int dimensions) {
     Json::Value stats;
     Json::Value reference_point_values(Json::arrayValue); // TODO
     reference_point_values.append(Json::Value(4.2));
     reference_point_values.append(Json::Value(4));
 
 
-    stats["main"]["input_filename"] = "input_file"; // TODO
-    stats["main"]["#_of_point_dimensions"] = 2; // TODO
-    stats["main"]["#_of_points"] = 12; // TODO
-    stats["parameters"]["algorithm"] = "parameter"; // TODO
-    stats["parameters"]["k"] = "parameter"; // TODO
-    stats["parameters"]["Eps"] = "parameter"; // TODO
-    stats["parameters"]["minPts"] = "parameter"; // TODO
+    stats["main"]["input_filename"] = vm["in_file"].as<string>();
+    stats["main"]["#_of_point_dimensions"] = dimensions;
+    stats["main"]["#_of_points"] = point_number;
+    stats["parameters"]["algorithm"] = vm["alg"].as<string>();
+    stats["parameters"]["k"] = vm["k"].as<int>();
+    stats["parameters"]["Eps"] = vm["eps"].as<double>();
+    stats["parameters"]["minPts"] = vm["minPts"].as<int>();
     stats["main"]["#_clusters"] = 2; // TODO
     stats["main"]["#_noise_points"] = 0; // TODO
     stats["main"]["#_core_points"] = 0; // TODO
