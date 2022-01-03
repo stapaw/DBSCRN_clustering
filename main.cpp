@@ -6,7 +6,6 @@
 #include <json/json.h>
 #include <json/value.h>
 #include <json/writer.h>
-#include<json/writer.h>
 
 
 # include "csv.h"
@@ -39,6 +38,8 @@ struct dist_comparator {
 void DBSCRN_expand_cluster(int i, int k, int i1);
 
 int get_cluster_of_nearest_core_point(int point, const vector<int> &vector);
+
+Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases);
 
 vector<point> points;
 int clusters[100000] = {0};
@@ -150,7 +151,6 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 }
 
 int main() {
-    ofstream OutFile("../out_file");
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
     const string clock_phases[] = {"read input file", "sort by reference point distances", "rnn calculation", "clustering", "stats calculation", "write output files", "total"};
     start_time = clock();
@@ -196,6 +196,11 @@ int main() {
     clustering_time = clock();
     stats_calculation_time = clock();
 
+
+    ofstream OutFile("../out_file");
+    ofstream StatsFile("../stats_file");
+    ofstream DebugFile("../debug_file");
+
     for (int i = 0; i < point_number; i++) {
         OutFile << i << SEPARATOR
                 << points.at(i).x << SEPARATOR << points.at(i).y << SEPARATOR
@@ -219,20 +224,14 @@ int main() {
     for(int i=0; i<number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
 
 
+    Json::Value stats = prepare_stats_file(clock_phases, time_diffs, number_of_phases);
+    StatsFile << stats;
+    StatsFile.close();
 
-    Json::Value stats;
-    Json::Value vec(Json::arrayValue);
-    vec.append(Json::Value(1));
-    vec.append(Json::Value(2));
-    vec.append(Json::Value(3));
 
-    stats["competitors"]["home"]["name"] = "Liverpool";
-    stats["competitors"]["away"]["code"] = 89223;
-    stats["competitors"]["away"]["name"] = "Aston Villa";
-    stats["competitors"]["away"]["code"]=vec;
+    DebugFile.close();
 
-    cout << stats << endl;
-//    unsigned int n;
+    //    unsigned int n;
 //    io::CSVReader<n> in("../ram.csv");
 //    in.read_header(io::ignore_extra_column, "a", "b", "c");
 //    std::string vendor; int size; double speed;
@@ -240,4 +239,42 @@ int main() {
 //        // do stuff with the data
 //    }
 
+}
+
+Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases) {
+    Json::Value stats;
+    Json::Value reference_point_values(Json::arrayValue); // TODO
+    reference_point_values.append(Json::Value(4.2));
+    reference_point_values.append(Json::Value(4));
+
+
+    stats["main"]["input_filename"] = "input_file"; // TODO
+    stats["main"]["#_of_point_dimensions"] = 2; // TODO
+    stats["main"]["#_of_points"] = 12; // TODO
+    stats["parameters"]["algorithm"] = "parameter"; // TODO
+    stats["parameters"]["k"] = "parameter"; // TODO
+    stats["parameters"]["Eps"] = "parameter"; // TODO
+    stats["parameters"]["minPts"] = "parameter"; // TODO
+    stats["main"]["#_clusters"] = 2; // TODO
+    stats["main"]["#_noise_points"] = 0; // TODO
+    stats["main"]["#_core_points"] = 0; // TODO
+    stats["main"]["#_border_points"] = 0; // TODO
+    stats["clustering_stats"]["avg_#_of_distance_calculation"] = 0; // TODO
+
+    stats["clustering_stats"]["silhouette_coefficient"] = 0; // TODO
+    stats["clustering_stats"]["davies_bouldin"] = 0; // TODO
+//time stats
+    for(int i=0; i<number_of_phases; i++)
+         stats["time_stats"][clock_phases[i]]  = time_diffs[i];
+
+
+    // if real cluster known
+    stats["clustering_stats"]["TP"] = 0; // TODO
+    stats["clustering_stats"]["TN"] = 0; // TODO
+    stats["clustering_stats"]["#_of_pairs"] = 0; // TODO ???
+    stats["clustering_stats"]["RAND"] = 0; // TODO
+    stats["clustering_stats"]["Purity"] = 0; // TODO
+
+    cout << stats << endl;
+    return stats;
 }
