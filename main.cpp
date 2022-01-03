@@ -41,6 +41,12 @@ int get_cluster_of_nearest_core_point(int point, const vector<int> &vector);
 
 Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases);
 
+void write_to_out_file(int point_number);
+
+void write_to_debug_file(int point_number);
+
+void write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases);
+
 vector<point> points;
 int clusters[100000] = {0};
 const string SEPARATOR = ",";
@@ -152,7 +158,8 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 
 int main() {
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
-    const string clock_phases[] = {"read input file", "sort by reference point distances", "rnn calculation", "clustering", "stats calculation", "write output files", "total"};
+    const string clock_phases[] = {"read input file", "sort by reference point distances", "rnn calculation",
+                                   "clustering", "stats calculation", "write output files", "total"};
     start_time = clock();
 
     int k, point_number, dimensions;
@@ -196,20 +203,9 @@ int main() {
     clustering_time = clock();
     stats_calculation_time = clock();
 
+    write_to_out_file(point_number);
 
-    ofstream OutFile("../out_file");
-    ofstream StatsFile("../stats_file");
-    ofstream DebugFile("../debug_file");
-
-    for (int i = 0; i < point_number; i++) {
-        OutFile << i << SEPARATOR
-                << points.at(i).x << SEPARATOR << points.at(i).y << SEPARATOR
-                << points.at(i).distanceCalculationNumber << SEPARATOR
-                << points.at(i).isCore << SEPARATOR
-                << clusters[i] << endl;
-    }
-    OutFile.close();
-
+    write_to_debug_file(point_number);
 
     output_write_time = clock();
     double time_diffs[] = {(double) (input_read_time - start_time) / CLOCKS_PER_SEC,
@@ -220,25 +216,44 @@ int main() {
                            (double) (output_write_time - stats_calculation_time) / CLOCKS_PER_SEC,
                            (double) (clock() - start_time) / CLOCKS_PER_SEC
     };
-    int number_of_phases = sizeof(clock_phases)/sizeof(*clock_phases);
-    for(int i=0; i<number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
+    int number_of_phases = sizeof(clock_phases) / sizeof(*clock_phases);
+    for (int i = 0; i < number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
 
+    write_to_stats_file(clock_phases, time_diffs, number_of_phases);
+}
 
+void write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases) {
+    ofstream StatsFile("../stats_file");
     Json::Value stats = prepare_stats_file(clock_phases, time_diffs, number_of_phases);
     StatsFile << stats;
     StatsFile.close();
+}
 
-
+void write_to_debug_file(int point_number) {
+    ofstream DebugFile("../debug_file");
+    for (int i = 0; i < point_number; i++) {
+        DebugFile << i << SEPARATOR
+                  << "max_eps" << SEPARATOR
+                  << "min_eps" << SEPARATOR // TODO: NDF ?
+                  << "rnn_number";
+        for(int j: points.at(i).rnn){
+            DebugFile << SEPARATOR << j;
+        }
+        DebugFile << endl;
+    }
     DebugFile.close();
+}
 
-    //    unsigned int n;
-//    io::CSVReader<n> in("../ram.csv");
-//    in.read_header(io::ignore_extra_column, "a", "b", "c");
-//    std::string vendor; int size; double speed;
-//    while(in.read_row(vendor, size, speed)){
-//        // do stuff with the data
-//    }
-
+void write_to_out_file(int point_number) {
+    ofstream OutFile("../out_file");
+    for (int i = 0; i < point_number; i++) {
+        OutFile << i << SEPARATOR
+                << points.at(i).x << SEPARATOR << points.at(i).y << SEPARATOR
+                << points.at(i).distanceCalculationNumber << SEPARATOR
+                << points.at(i).isCore << SEPARATOR
+                << clusters[i] << endl;
+    }
+    OutFile.close();
 }
 
 Json::Value prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases) {
@@ -264,8 +279,8 @@ Json::Value prepare_stats_file(const string *clock_phases, const double *time_di
     stats["clustering_stats"]["silhouette_coefficient"] = 0; // TODO
     stats["clustering_stats"]["davies_bouldin"] = 0; // TODO
 //time stats
-    for(int i=0; i<number_of_phases; i++)
-         stats["time_stats"][clock_phases[i]]  = time_diffs[i];
+    for (int i = 0; i < number_of_phases; i++)
+        stats["time_stats"][clock_phases[i]] = time_diffs[i];
 
 
     // if real cluster known
