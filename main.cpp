@@ -3,6 +3,10 @@
 #include <queue>
 #include <fstream>
 #include <time.h>
+#include <json/json.h>
+#include <json/value.h>
+#include <json/writer.h>
+#include<json/writer.h>
 
 
 # include "csv.h"
@@ -214,6 +218,20 @@ int main() {
     int number_of_phases = sizeof(clock_phases)/sizeof(*clock_phases);
     for(int i=0; i<number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
 
+
+
+    Json::Value stats;
+    Json::Value vec(Json::arrayValue);
+    vec.append(Json::Value(1));
+    vec.append(Json::Value(2));
+    vec.append(Json::Value(3));
+
+    stats["competitors"]["home"]["name"] = "Liverpool";
+    stats["competitors"]["away"]["code"] = 89223;
+    stats["competitors"]["away"]["name"] = "Aston Villa";
+    stats["competitors"]["away"]["code"]=vec;
+
+    cout << stats << endl;
 //    unsigned int n;
 //    io::CSVReader<n> in("../ram.csv");
 //    in.read_header(io::ignore_extra_column, "a", "b", "c");
