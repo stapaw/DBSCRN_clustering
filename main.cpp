@@ -69,6 +69,7 @@ void calculate_knn_optimized(int k);
 vector<point> points;
 int clusters[100000] = {0};
 const string SEPARATOR = ",";
+const string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point &point, const struct point &other) {
     double dx = point.x - other.x;
@@ -121,26 +122,35 @@ void calculate_knn_optimized(point p, int k) {
     vector<distance_x> distances = calculate_distances_for_knn(r, points.size());
     sort(distances.begin(), distances.end(), dist_comparator());
     vector<distance_x> k_dist = calculate_distances_for_knn(p, k);
+    set<int> knn;
+    for(distance_x distance: k_dist){
+        knn.insert(distance.id);
+    }
+
 
     priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
-    print_queue(queue);
+//    print_queue(queue);
 
     double radius = queue.top().dist;
     int p_idx = find_if(distances.begin(), distances.end(), find_id(p.id)) - distances.begin();
-//            (bind(&distance_x::id, placeholders::_1) == p.id));
-    cout<< "p_idx" << p_idx;
+
     int up_idx = max(p_idx - 1, 0);
     bool point_within_range_up = ((distances.at(up_idx).dist - distances.at(p_idx).dist) <= radius);
     if(p.id != 0) {
         while (point_within_range_up) {
-            double current_dist = calculate_distance(p, points.at(distances.at(up_idx).id));
-            if (current_dist <= radius) {
-                distance_x distance;
-                distance.id = distances.at(up_idx).id;
-                distance.dist = current_dist;
-                queue.push(distance);
-                queue.pop();
-                radius = queue.top().dist;
+            const bool is_in_knn = knn.find(distances.at(up_idx).id) != knn.end();
+            if(not is_in_knn) {
+                double current_dist = calculate_distance(p, points.at(distances.at(up_idx).id));
+                if (current_dist <= radius) {
+                    distance_x distance;
+                    distance.id = distances.at(up_idx).id;
+                    distance.dist = current_dist;
+                    knn.insert(distance.id);
+                    knn.erase(queue.top().id);
+                    queue.push(distance);
+                    queue.pop();
+                    radius = queue.top().dist;
+                }
             }
             if (up_idx == 0)break;
             up_idx = max(up_idx - 1, 0);
@@ -152,21 +162,27 @@ void calculate_knn_optimized(point p, int k) {
     bool point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
     if(p.id != max_index) {
         while (point_within_range_down) {
-            double current_dist = calculate_distance(p, points.at(distances.at(down_idx).id));
-            if (current_dist <= radius) {
-                distance_x distance;
-                distance.id = distances.at(down_idx).id;
-                distance.dist = current_dist;
-                queue.push(distance);
-                queue.pop();
-                radius = queue.top().dist;
+            const bool is_in_knn = knn.find(distances.at(down_idx).id) != knn.end();
+            if(not is_in_knn) {
+                double current_dist = calculate_distance(p, points.at(distances.at(down_idx).id));
+                if (current_dist <= radius) {
+                    distance_x distance;
+                    distance.id = distances.at(down_idx).id;
+                    distance.dist = current_dist;
+                    knn.insert(distance.id);
+                    knn.erase(queue.top().id);
+                    queue.push(distance);
+                    queue.pop();
+                    radius = queue.top().dist;
+                }
             }
             if (down_idx == distances.size() - 1)break;
             down_idx = min(down_idx + 1, max_index);
             point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
         }
     }
-    print_queue(queue);
+//    print_queue(queue);
+//TODO: update knn from set not from queue
     for (int j = 0; j < k; j++) {
         points.at(p.id).knn.push_back(queue.top().id);
 
@@ -244,10 +260,10 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("in_file", po::value<string>()->default_value("../datasets/example.txt"),
-             "input filename") // TODO: change to example
+            ("in_file", po::value<string>()->default_value("../datasets/complex9.txt"),
+             "input filename")
             ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
-            ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
+            ("k", po::value<int>()->default_value(5), "number of nearest neighbors")
             ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             ("minPts", po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             ("optimized", po::value<bool>()->default_value(false), "run optimized version");
@@ -284,21 +300,21 @@ int main(int argc, char *argv[]) {
 
     sort_by_reference_point_time = clock();
 
-//    calculate_knn(k);
-    calculate_knn_optimized(k);
+    calculate_knn(k);
+//    calculate_knn_optimized(k);
     rnn_neighbour_time = clock();
 
 //    for(int i=0; i<point_number; i++){
 //        point p = points.at(i);
 //        cout << endl;
 //        cout << p.id << " " << p.x << " " << p.y << endl;
-////        cout << "knn: ";
+//        cout << "knn: ";
 //        for(int j : p.knn){
-////            cout << letters[j] << " ";
+//            cout << letters[j] << " ";
 //        }
-////        cout << endl << "rnn: ";
+//        cout << endl << "rnn: ";
 //        for(int j : p.rnn){
-////            cout << letters[j] << " ";
+//            cout << letters[j] << " ";
 //        }
 //    }
     auto[cluster_number, core_points_number, non_core_points_number] = DBSCRN(k);
