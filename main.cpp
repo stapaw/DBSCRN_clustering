@@ -3,7 +3,6 @@
 #include <queue>
 #include <fstream>
 #include <time.h>
-#include <json/json.h>
 #include <json/value.h>
 #include <json/writer.h>
 #include <functional>
@@ -113,8 +112,6 @@ void calculate_knn(int k) {
         vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
 
         sort(distances.begin(), distances.end(), dist_comparator());
-//        cout << i << ":" << endl;
-//        for (distance_x j: distances) cout << j.id << ' ' << j.dist << endl;
         for (int j = 1; j <= k; j++) {
             if (points.at(i).id != distances.at(j).id) {
                 points.at(i).knn.push_back(distances.at(j).id);
@@ -249,23 +246,18 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
     visited[i] = true;
     for (int j = 0; j < S_tmp.size(); j++) {
         int y_k = S_tmp.at(j);
-//        cout << "y_k: " << letters[y_k] << endl;
         for (int y_j: points.at(y_k).rnn) {
             //TODO: change for math pi value
             if (points.at(y_j).rnn.size() > (2 * k / 3.14)) {
-//                cout << "   y_j: " << letters[y_j] <<endl;
                 for (int p:points.at(y_j).rnn) {
-//                    TODO: add visited;
                     if (!visited[p]) {
                         S_tmp.push_back(p);
                         visited[p] = true;
-//                       cout <<"    added to S_tmp: " << letters[p] << endl;
                     }
                 }
             }
             if (clusters[y_j] == 0) {
                 clusters[y_j] = cluster_number;
-//                cout << "assigned " <<letters[y_j] << " -> " << cluster_number  << endl;
             }
         }
     }
@@ -338,14 +330,6 @@ int main(int argc, char *argv[]) {
         point p = points.at(i);
         cout << endl;
         cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
-//        cout << "knn: ";
-//        for(int j : p.knn){
-//            cout << letters[j] << " ";
-//        }
-//        cout << endl << "rnn: ";
-//        for(int j : p.rnn){
-//            cout << letters[j] << " ";
-//        }
     }
     auto[cluster_number, core_points_number, non_core_points_number] = DBSCRN(k);
 
@@ -403,6 +387,10 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
 
 void write_to_debug_file(int point_number) {
     ofstream DebugFile("../debug_file");
+
+    DebugFile << "id" << SEPARATOR<< "max_eps" << SEPARATOR<< "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
+    DebugFile << "[knn]" << SEPARATOR << "[rnn]" << endl;
+
     for (int i = 0; i < point_number; i++) {
         DebugFile << i << SEPARATOR
                   << points.at(i).max_eps << SEPARATOR
@@ -422,10 +410,15 @@ void write_to_debug_file(int point_number) {
 }
 
 void write_to_out_file(int point_number) {
+    int dimensions = points.at(0).dimensions.size();
     ofstream OutFile("../out_file");
+//    header
+    OutFile << "id" << SEPARATOR;
+    for (int j = 0; j < dimensions; j++) OutFile << "d" << j << SEPARATOR;
+    OutFile << "distance_calculations" << SEPARATOR<< "is_core" << SEPARATOR << "cluster_id" << endl;
+
     for (int i = 0; i < point_number; i++) {
         OutFile << i << SEPARATOR;
-        int dimensions = points.at(0).dimensions.size();
         for (int j = 0; j < dimensions; j++) {
             OutFile << points.at(i).dimensions.at(j) << SEPARATOR;
         }
