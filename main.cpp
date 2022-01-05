@@ -70,9 +70,9 @@ void calculate_knn_optimized(int k, point reference_point);
 double big_number = 9999999;
 vector<point> points;
 int clusters[100000] = {0};
+bool visited[100000] = {0};
 double reference_values[10000] = {big_number};
 const string SEPARATOR = ",";
-const string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point &point, const struct point &other) {
     int dimension = point.dimensions.size();
@@ -217,7 +217,9 @@ auto DBSCRN(int k) {
     }
     for (int non_core_point : S_non_core) {
         points.at(non_core_point).isCore = false;
-        clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
+        if (clusters[non_core_point] == 0) {
+            clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
+        }
     }
     struct result {
         int cluster_number;
@@ -237,6 +239,7 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 
     clusters[i] = cluster_number;
     S_tmp.push_back(i);
+    visited[i] = true;
     for (int j = 0; j < S_tmp.size(); j++) {
         int y_k = S_tmp.at(j);
 //        cout << "y_k: " << letters[y_k] << endl;
@@ -245,8 +248,10 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
             if (points.at(y_j).rnn.size() > (2 * k / 3.14)) {
 //                cout << "   y_j: " << letters[y_j] <<endl;
                 for (int p:points.at(y_j).rnn) {
-                    if (std::find(S_tmp.begin(), S_tmp.end(), p) == S_tmp.end()) {
+//                    TODO: add visited;
+                    if (!visited[p]) {
                         S_tmp.push_back(p);
+                        visited[p] = true;
 //                       cout <<"    added to S_tmp: " << letters[p] << endl;
                     }
                 }
@@ -256,6 +261,9 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 //                cout << "assigned " <<letters[y_j] << " -> " << cluster_number  << endl;
             }
         }
+    }
+    for(int p: S_tmp){
+        visited[p] = false;
     }
 }
 
@@ -267,7 +275,7 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("in_file", po::value<string>()->default_value("../datasets/complex9.txt"),
+            ("in_file", po::value<string>()->default_value("../datasets/cluto-t7-10k.txt"),
              "input filename")
             ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
             ("k", po::value<int>()->default_value(5), "number of nearest neighbors")
@@ -306,18 +314,21 @@ int main(int argc, char *argv[]) {
     }
     input_read_time = clock();
 
-    point reference_point;
-    for (int i = 0; i < dimensions; i++) {
-        reference_point.dimensions.push_back(reference_values[i]);
+    if(vm["optimized"].as<bool>()){
+        point reference_point;
+        for (int i = 0; i < dimensions; i++) {
+            reference_point.dimensions.push_back(reference_values[i]);
+        }
+        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
+        sort(distances.begin(), distances.end(), dist_comparator());
+
+        sort_by_reference_point_time = clock();
+        calculate_knn_optimized(k, reference_point);
     }
-
-    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-    sort(distances.begin(), distances.end(), dist_comparator());
-
-    sort_by_reference_point_time = clock();
-
-//    calculate_knn(k);
-    calculate_knn_optimized(k, reference_point);
+    else{
+        sort_by_reference_point_time = clock();
+        calculate_knn(k);
+    }
     rnn_neighbour_time = clock();
 
     for (int i = 0; i < point_number; i++) {
