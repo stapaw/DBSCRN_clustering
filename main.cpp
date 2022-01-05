@@ -125,85 +125,81 @@ void calculate_knn(int k) {
     }
 }
 
-void calculate_knn_optimized( vector<distance_x> distances, point p, int k) {
-    int max_index = distances.size()-1;
+void calculate_knn_optimized(vector<distance_x> distances, int distance_idx, int point_id, int k) {
+    int max_index = distances.size() - 1;
     //TODO: empty queue
     vector<distance_x> k_dist;
-    int p_idx = find_if(distances.begin(), distances.end(), find_id(p.id)) - distances.begin();
+    int p_idx = distance_idx;
     priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
     int up = 1;
     int down = 1;
-    for(int i=0; i<k; i++){
+    for (int i = 0; i < k; i++) {
         int up_idx = p_idx - up;
         int down_idx = p_idx + down;
         double up_value, down_value;
 
-        if(up_idx < 0) up_value = big_number;
+        if (up_idx < 0) up_value = big_number;
         else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
 
-        if(down_idx > max_index) down_value = big_number;
+        if (down_idx > max_index) down_value = big_number;
         else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
 
         point other;
-        if(up_value < down_value){
-            other = points.at(up_idx);
+        if (up_value < down_value) {
+            other = points.at(distances.at(up_idx).id);
             up++;
-        }
-        else{
-            other = points.at(down_idx);
+        } else {
+            other = points.at(distances.at(down_idx).id);
             down++;
         }
         distance_x distance;
         distance.id = other.id;
-        distance.dist = calculate_distance(p, other);
+        distance.dist = calculate_distance(points.at(point_id), other);
         queue.push(distance);
     }
-    points.at(p.id).distanceCalculationNumber += k;
+    points.at(point_id).distanceCalculationNumber += k;
     double radius = queue.top().dist;
-    points.at(p.id).max_eps = radius;
+    points.at(point_id).max_eps = radius;
 
-    while(1){
+    while (1) {
         int up_idx = p_idx - up;
         int down_idx = p_idx + down;
         double up_value, down_value;
 
-        if(up_idx < 0) up_value = big_number;
+        if (up_idx < 0) up_value = big_number;
         else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
 
-        if(down_idx > max_index) down_value = big_number;
+        if (down_idx > max_index) down_value = big_number;
         else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
 
         point other;
-        if(up_value < down_value){
-            if(up_value < radius){
-                other = points.at(up_idx);
+        if (up_value < down_value) {
+            if (up_value < radius) {
+                other =  points.at(distances.at(up_idx).id);
                 up++;
-            }
-            else break;
-        }
-        else{
-            if(down_value < radius){
-                other = points.at(down_idx);
+            } else break;
+        } else {
+            if (down_value < radius) {
+                other =  points.at(distances.at(down_idx).id);
                 down++;
-            }
-            else break;
+            } else break;
         }
         distance_x distance;
         distance.id = other.id;
-        distance.dist = calculate_distance(p, other);
-        points.at(p.id).distanceCalculationNumber ++;
+        distance.dist = calculate_distance(points.at(point_id), other);
+        points.at(point_id).distanceCalculationNumber++;
 
         queue.push(distance);
         queue.pop();
         radius = queue.top().dist;
     }
-    points.at(p.id).min_eps = radius;
+    points.at(point_id).min_eps = radius;
 
     for (int j = 0; j < k; j++) {
-        if (p.id != queue.top().id) {
-            points.at(p.id).knn.push_back(queue.top().id);
+        if (point_id != queue.top().id) {
+            points.at(point_id).knn.push_back(queue.top().id);
 
-            points.at(queue.top().id).rnn.push_back(p.id);
+            points.at(queue.top().id).rnn.push_back(point_id);
         }
         queue.pop();
     }
@@ -322,18 +318,17 @@ int main(int argc, char *argv[]) {
     }
     input_read_time = clock();
 
-    if(vm["optimized"].as<bool>()){
+    if (vm["optimized"].as<bool>()) {
         point reference_point;
         for (int i = 0; i < dimensions; i++) {
             reference_point.dimensions.push_back(reference_values[i]);
         }
-        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-        sort(distances.begin(), distances.end(), dist_comparator());
-
+//        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
+//        sort(distances.begin(), distances.end(), dist_comparator());
+//        TODO: not real value - update code
         sort_by_reference_point_time = clock();
         calculate_knn_optimized(k, reference_point);
-    }
-    else{
+    } else {
         sort_by_reference_point_time = clock();
         calculate_knn(k);
     }
@@ -391,8 +386,9 @@ int main(int argc, char *argv[]) {
 void calculate_knn_optimized(int k, point reference_point) {
     vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
     sort(distances.begin(), distances.end(), dist_comparator());
-    for (auto p : points) {
-        calculate_knn_optimized(distances, p, k);
+    int size = distances.size();
+    for (int i = 0; i < size; i++) {
+        calculate_knn_optimized(distances, i, distances.at(i).id, k);
     }
 }
 
@@ -411,11 +407,16 @@ void write_to_debug_file(int point_number) {
         DebugFile << i << SEPARATOR
                   << points.at(i).max_eps << SEPARATOR
                   << points.at(i).min_eps << SEPARATOR
-                  << points.at(i).rnn.size();
-        for (int j: points.at(i).rnn) {
-            DebugFile << SEPARATOR << j;
+                  << points.at(i).rnn.size() << SEPARATOR;
+        DebugFile << "[ ";
+        for (int j: points.at(i).knn) {
+            DebugFile << j << " ";
         }
-        DebugFile << endl;
+        DebugFile << "]" << SEPARATOR << "[ ";
+        for (int j: points.at(i).rnn) {
+            DebugFile << j << " ";;
+        }
+        DebugFile << "]" << endl;
     }
     DebugFile.close();
 }
