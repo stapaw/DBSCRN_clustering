@@ -123,18 +123,21 @@ void calculate_knn(int k) {
     }
 }
 
-void calculate_knn_optimized(point reference_point, point p, int k) {
-    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-    sort(distances.begin(), distances.end(), dist_comparator());
+void calculate_knn_optimized( vector<distance_x> distances, point p, int k) {
+    auto t2 = clock();
     vector<distance_x> k_dist = calculate_distances_for_knn(p, k);
+    points.at(p.id).distanceCalculationNumber += k;
     set<int> knn;
     for (distance_x distance: k_dist) {
         knn.insert(distance.id);
     }
-
+    auto t3 = clock();
+    cout << "k_dist calc" << (double) (t3-t2) / CLOCKS_PER_SEC << endl;
 
     priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
 //    print_queue(queue);
+    auto t4 = clock();
+    cout << "queue calc" << (double) (t4-t3) / CLOCKS_PER_SEC << endl;
 
     double radius = queue.top().dist;
     int p_idx = find_if(distances.begin(), distances.end(), find_id(p.id)) - distances.begin();
@@ -146,6 +149,7 @@ void calculate_knn_optimized(point reference_point, point p, int k) {
             const bool is_in_knn = knn.find(distances.at(up_idx).id) != knn.end();
             if (not is_in_knn) {
                 double current_dist = calculate_distance(p, points.at(distances.at(up_idx).id));
+                points.at(p.id).distanceCalculationNumber++;
                 if (current_dist <= radius) {
                     distance_x distance;
                     distance.id = distances.at(up_idx).id;
@@ -162,6 +166,9 @@ void calculate_knn_optimized(point reference_point, point p, int k) {
             point_within_range_up = ((distances.at(up_idx).dist - distances.at(p_idx).dist) <= radius);
         }
     }
+    auto t5 = clock();
+    cout << "up calc" << (double) (t5-t4) / CLOCKS_PER_SEC << endl;
+
     int max_index = distances.size() - 1;
     int down_idx = min(p_idx + 1, max_index);
     bool point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
@@ -170,6 +177,7 @@ void calculate_knn_optimized(point reference_point, point p, int k) {
             const bool is_in_knn = knn.find(distances.at(down_idx).id) != knn.end();
             if (not is_in_knn) {
                 double current_dist = calculate_distance(p, points.at(distances.at(down_idx).id));
+                points.at(p.id).distanceCalculationNumber++;
                 if (current_dist <= radius) {
                     distance_x distance;
                     distance.id = distances.at(down_idx).id;
@@ -186,6 +194,8 @@ void calculate_knn_optimized(point reference_point, point p, int k) {
             point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
         }
     }
+    auto t6 = clock();
+    cout << "down calc" << (double) (t6-t5) / CLOCKS_PER_SEC << endl;
 //    print_queue(queue);
 //TODO: update knn from set not from queue
     for (int j = 0; j < k; j++) {
@@ -262,9 +272,6 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
             }
         }
     }
-    for(int p: S_tmp){
-        visited[p] = false;
-    }
 }
 
 int main(int argc, char *argv[]) {
@@ -281,7 +288,7 @@ int main(int argc, char *argv[]) {
             ("k", po::value<int>()->default_value(5), "number of nearest neighbors")
             ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             ("minPts", po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
-            ("optimized", po::value<bool>()->default_value(false), "run optimized version");
+            ("optimized", po::value<bool>()->default_value(true), "run optimized version");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -381,8 +388,10 @@ int main(int argc, char *argv[]) {
 }
 
 void calculate_knn_optimized(int k, point reference_point) {
+    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
+    sort(distances.begin(), distances.end(), dist_comparator());
     for (auto p : points) {
-        calculate_knn_optimized(reference_point, p, k);
+        calculate_knn_optimized(distances, p, k);
     }
 }
 
