@@ -21,6 +21,8 @@ struct point {
     int id{};
     bool isCore = true;
     int distanceCalculationNumber = 0;
+    double max_eps;
+    double min_eps;
     vector<double> dimensions;
     vector<int> knn;
     vector<int> rnn;
@@ -124,80 +126,79 @@ void calculate_knn(int k) {
 }
 
 void calculate_knn_optimized( vector<distance_x> distances, point p, int k) {
-    auto t2 = clock();
-    vector<distance_x> k_dist = calculate_distances_for_knn(p, k);
-    points.at(p.id).distanceCalculationNumber += k;
-    set<int> knn;
-    for (distance_x distance: k_dist) {
-        knn.insert(distance.id);
-    }
-    auto t3 = clock();
-    cout << "k_dist calc" << (double) (t3-t2) / CLOCKS_PER_SEC << endl;
-
-    priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
-//    print_queue(queue);
-    auto t4 = clock();
-    cout << "queue calc" << (double) (t4-t3) / CLOCKS_PER_SEC << endl;
-
-    double radius = queue.top().dist;
+    int max_index = distances.size()-1;
+    //TODO: empty queue
+    vector<distance_x> k_dist;
     int p_idx = find_if(distances.begin(), distances.end(), find_id(p.id)) - distances.begin();
+    priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
+    int up = 1;
+    int down = 1;
+    for(int i=0; i<k; i++){
+        int up_idx = p_idx - up;
+        int down_idx = p_idx + down;
+        double up_value, down_value;
 
-    int up_idx = max(p_idx - 1, 0);
-    bool point_within_range_up = ((distances.at(up_idx).dist - distances.at(p_idx).dist) <= radius);
-    if (p.id != 0) {
-        while (point_within_range_up) {
-            const bool is_in_knn = knn.find(distances.at(up_idx).id) != knn.end();
-            if (not is_in_knn) {
-                double current_dist = calculate_distance(p, points.at(distances.at(up_idx).id));
-                points.at(p.id).distanceCalculationNumber++;
-                if (current_dist <= radius) {
-                    distance_x distance;
-                    distance.id = distances.at(up_idx).id;
-                    distance.dist = current_dist;
-                    knn.insert(distance.id);
-                    knn.erase(queue.top().id);
-                    queue.push(distance);
-                    queue.pop();
-                    radius = queue.top().dist;
-                }
-            }
-            if (up_idx == 0)break;
-            up_idx = max(up_idx - 1, 0);
-            point_within_range_up = ((distances.at(up_idx).dist - distances.at(p_idx).dist) <= radius);
-        }
-    }
-    auto t5 = clock();
-    cout << "up calc" << (double) (t5-t4) / CLOCKS_PER_SEC << endl;
+        if(up_idx < 0) up_value = big_number;
+        else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
 
-    int max_index = distances.size() - 1;
-    int down_idx = min(p_idx + 1, max_index);
-    bool point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
-    if (p.id != max_index) {
-        while (point_within_range_down) {
-            const bool is_in_knn = knn.find(distances.at(down_idx).id) != knn.end();
-            if (not is_in_knn) {
-                double current_dist = calculate_distance(p, points.at(distances.at(down_idx).id));
-                points.at(p.id).distanceCalculationNumber++;
-                if (current_dist <= radius) {
-                    distance_x distance;
-                    distance.id = distances.at(down_idx).id;
-                    distance.dist = current_dist;
-                    knn.insert(distance.id);
-                    knn.erase(queue.top().id);
-                    queue.push(distance);
-                    queue.pop();
-                    radius = queue.top().dist;
-                }
-            }
-            if (down_idx == distances.size() - 1)break;
-            down_idx = min(down_idx + 1, max_index);
-            point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
+        if(down_idx > max_index) down_value = big_number;
+        else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
+
+        point other;
+        if(up_value < down_value){
+            other = points.at(up_idx);
+            up++;
         }
+        else{
+            other = points.at(down_idx);
+            down++;
+        }
+        distance_x distance;
+        distance.id = other.id;
+        distance.dist = calculate_distance(p, other);
+        queue.push(distance);
     }
-    auto t6 = clock();
-    cout << "down calc" << (double) (t6-t5) / CLOCKS_PER_SEC << endl;
-//    print_queue(queue);
-//TODO: update knn from set not from queue
+    points.at(p.id).distanceCalculationNumber += k;
+    double radius = queue.top().dist;
+    points.at(p.id).max_eps = radius;
+
+    while(1){
+        int up_idx = p_idx - up;
+        int down_idx = p_idx + down;
+        double up_value, down_value;
+
+        if(up_idx < 0) up_value = big_number;
+        else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
+
+        if(down_idx > max_index) down_value = big_number;
+        else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
+
+        point other;
+        if(up_value < down_value){
+            if(up_value < radius){
+                other = points.at(up_idx);
+                up++;
+            }
+            else break;
+        }
+        else{
+            if(down_value < radius){
+                other = points.at(down_idx);
+                down++;
+            }
+            else break;
+        }
+        distance_x distance;
+        distance.id = other.id;
+        distance.dist = calculate_distance(p, other);
+        points.at(p.id).distanceCalculationNumber ++;
+
+        queue.push(distance);
+        queue.pop();
+        radius = queue.top().dist;
+    }
+    points.at(p.id).min_eps = radius;
+
     for (int j = 0; j < k; j++) {
         if (p.id != queue.top().id) {
             points.at(p.id).knn.push_back(queue.top().id);
@@ -282,10 +283,10 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("in_file", po::value<string>()->default_value("../datasets/cluto-t7-10k.txt"),
+            ("in_file", po::value<string>()->default_value("../datasets/example.txt"),
              "input filename")
             ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
-            ("k", po::value<int>()->default_value(5), "number of nearest neighbors")
+            ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
             ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             ("minPts", po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             ("optimized", po::value<bool>()->default_value(true), "run optimized version");
@@ -408,9 +409,9 @@ void write_to_debug_file(int point_number) {
     ofstream DebugFile("../debug_file");
     for (int i = 0; i < point_number; i++) {
         DebugFile << i << SEPARATOR
-                  << "max_eps" << SEPARATOR
-                  << "min_eps" << SEPARATOR // TODO: NDF ?
-                  << "rnn_number";
+                  << points.at(i).max_eps << SEPARATOR
+                  << points.at(i).min_eps << SEPARATOR
+                  << points.at(i).rnn.size();
         for (int j: points.at(i).rnn) {
             DebugFile << SEPARATOR << j;
         }
