@@ -19,10 +19,9 @@ using namespace std;
 
 struct point {
     int id{};
-    double x{};
-    double y{};
     bool isCore = true;
     int distanceCalculationNumber = 0;
+    vector<double> dimensions;
     vector<int> knn;
     vector<int> rnn;
 };
@@ -35,8 +34,10 @@ struct distance_x {
 
 struct find_id : std::unary_function<distance_x, bool> {
     int id;
-    find_id(int id):id(id) { }
-    bool operator()(distance_x const& m) const {
+
+    find_id(int id) : id(id) {}
+
+    bool operator()(distance_x const &m) const {
         return m.id == id;
     }
 };
@@ -64,17 +65,22 @@ void
 write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
                     map<string, double> point_number);
 
-void calculate_knn_optimized(int k);
+void calculate_knn_optimized(int k, point reference_point);
 
+double big_number = 9999999;
 vector<point> points;
 int clusters[100000] = {0};
+double reference_values[10000] = {big_number};
 const string SEPARATOR = ",";
 const string letters = "ABCDEFGHIJKL";
 
 double calculate_distance(const point &point, const struct point &other) {
-    double dx = point.x - other.x;
-    double dy = point.y - other.y;
-    double dist = dx * dx + dy * dy;
+    int dimension = point.dimensions.size();
+    double dist = 0;
+    for (int i = 0; i < dimension; i++) {
+        double diff = point.dimensions.at(i) - other.dimensions.at(i);
+        dist += diff * diff;
+    }
     return sqrt(dist);
 }
 
@@ -107,23 +113,22 @@ void calculate_knn(int k) {
         sort(distances.begin(), distances.end(), dist_comparator());
 //        cout << i << ":" << endl;
 //        for (distance_x j: distances) cout << j.id << ' ' << j.dist << endl;
-        for (int j = 0; j < k; j++) {
-            points.at(i).knn.push_back(distances.at(j).id);
+        for (int j = 1; j <= k; j++) {
+            if (points.at(i).id != distances.at(j).id) {
+                points.at(i).knn.push_back(distances.at(j).id);
 
-            points.at(distances.at(j).id).rnn.push_back(i);
+                points.at(distances.at(j).id).rnn.push_back(i);
+            }
         }
     }
 }
 
-void calculate_knn_optimized(point p, int k) {
-    point r;
-    r.x = 0;
-    r.y = 0;
-    vector<distance_x> distances = calculate_distances_for_knn(r, points.size());
+void calculate_knn_optimized(point reference_point, point p, int k) {
+    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
     sort(distances.begin(), distances.end(), dist_comparator());
     vector<distance_x> k_dist = calculate_distances_for_knn(p, k);
     set<int> knn;
-    for(distance_x distance: k_dist){
+    for (distance_x distance: k_dist) {
         knn.insert(distance.id);
     }
 
@@ -136,10 +141,10 @@ void calculate_knn_optimized(point p, int k) {
 
     int up_idx = max(p_idx - 1, 0);
     bool point_within_range_up = ((distances.at(up_idx).dist - distances.at(p_idx).dist) <= radius);
-    if(p.id != 0) {
+    if (p.id != 0) {
         while (point_within_range_up) {
             const bool is_in_knn = knn.find(distances.at(up_idx).id) != knn.end();
-            if(not is_in_knn) {
+            if (not is_in_knn) {
                 double current_dist = calculate_distance(p, points.at(distances.at(up_idx).id));
                 if (current_dist <= radius) {
                     distance_x distance;
@@ -160,10 +165,10 @@ void calculate_knn_optimized(point p, int k) {
     int max_index = distances.size() - 1;
     int down_idx = min(p_idx + 1, max_index);
     bool point_within_range_down = ((distances.at(down_idx).dist - distances.at(p_idx).dist) <= radius);
-    if(p.id != max_index) {
+    if (p.id != max_index) {
         while (point_within_range_down) {
             const bool is_in_knn = knn.find(distances.at(down_idx).id) != knn.end();
-            if(not is_in_knn) {
+            if (not is_in_knn) {
                 double current_dist = calculate_distance(p, points.at(distances.at(down_idx).id));
                 if (current_dist <= radius) {
                     distance_x distance;
@@ -184,9 +189,11 @@ void calculate_knn_optimized(point p, int k) {
 //    print_queue(queue);
 //TODO: update knn from set not from queue
     for (int j = 0; j < k; j++) {
-        points.at(p.id).knn.push_back(queue.top().id);
+        if (p.id != queue.top().id) {
+            points.at(p.id).knn.push_back(queue.top().id);
 
-        points.at(queue.top().id).rnn.push_back(p.id);
+            points.at(queue.top().id).rnn.push_back(p.id);
+        }
         queue.pop();
     }
 }
@@ -235,7 +242,7 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
 //        cout << "y_k: " << letters[y_k] << endl;
         for (int y_j: points.at(y_k).rnn) {
             //TODO: change for math pi value
-            if (points.at(y_j).rnn.size() > 2 * k / 3.14) {
+            if (points.at(y_j).rnn.size() > (2 * k / 3.14)) {
 //                cout << "   y_j: " << letters[y_j] <<endl;
                 for (int p:points.at(y_j).rnn) {
                     if (std::find(S_tmp.begin(), S_tmp.end(), p) == S_tmp.end()) {
@@ -283,31 +290,40 @@ int main(int argc, char *argv[]) {
     int k = vm["k"].as<int>();
     int point_number, dimensions;
     InputFile >> point_number >> dimensions;
-//  TODO: update for more than 2 dimensions
+
     for (int i = 0; i < point_number; i++) {
         point p;
         p.id = i;
-        InputFile >> p.x >> p.y;
+        for (int j = 0; j < dimensions; j++) {
+            double v;
+            InputFile >> v;
+            p.dimensions.push_back(v);
+            if (v < reference_values[j]) {
+                reference_values[j] = v;
+            }
+        }
         points.push_back(p);
     }
     input_read_time = clock();
 
-    point r;
-    r.x = 4.2;
-    r.y = 4;
-    vector<distance_x> distances = calculate_distances_for_knn(r, points.size());
+    point reference_point;
+    for (int i = 0; i < dimensions; i++) {
+        reference_point.dimensions.push_back(reference_values[i]);
+    }
+
+    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
     sort(distances.begin(), distances.end(), dist_comparator());
 
     sort_by_reference_point_time = clock();
 
-    calculate_knn(k);
-//    calculate_knn_optimized(k);
+//    calculate_knn(k);
+    calculate_knn_optimized(k, reference_point);
     rnn_neighbour_time = clock();
 
-//    for(int i=0; i<point_number; i++){
-//        point p = points.at(i);
-//        cout << endl;
-//        cout << p.id << " " << p.x << " " << p.y << endl;
+    for (int i = 0; i < point_number; i++) {
+        point p = points.at(i);
+        cout << endl;
+        cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
 //        cout << "knn: ";
 //        for(int j : p.knn){
 //            cout << letters[j] << " ";
@@ -316,9 +332,14 @@ int main(int argc, char *argv[]) {
 //        for(int j : p.rnn){
 //            cout << letters[j] << " ";
 //        }
-//    }
+    }
     auto[cluster_number, core_points_number, non_core_points_number] = DBSCRN(k);
 
+    for (int i = 0; i < point_number; i++) {
+        cout << i << " " << clusters[i] << endl;
+        point p = points.at(i);
+        cout << "rnn size: " << p.rnn.size() << endl;
+    }
     clustering_time = clock();
     stats_calculation_time = clock();
 
@@ -348,9 +369,9 @@ int main(int argc, char *argv[]) {
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, values);
 }
 
-void calculate_knn_optimized(int k) {
+void calculate_knn_optimized(int k, point reference_point) {
     for (auto p : points) {
-        calculate_knn_optimized(p, k);
+        calculate_knn_optimized(reference_point, p, k);
     }
 }
 
@@ -381,9 +402,12 @@ void write_to_debug_file(int point_number) {
 void write_to_out_file(int point_number) {
     ofstream OutFile("../out_file");
     for (int i = 0; i < point_number; i++) {
-        OutFile << i << SEPARATOR
-                << points.at(i).x << SEPARATOR << points.at(i).y << SEPARATOR
-                << points.at(i).distanceCalculationNumber << SEPARATOR
+        OutFile << i << SEPARATOR;
+        int dimensions = points.at(0).dimensions.size();
+        for (int j = 0; j < dimensions; j++) {
+            OutFile << points.at(i).dimensions.at(j) << SEPARATOR;
+        }
+        OutFile << points.at(i).distanceCalculationNumber << SEPARATOR
                 << points.at(i).isCore << SEPARATOR
                 << clusters[i] << endl;
     }
