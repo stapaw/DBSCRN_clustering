@@ -9,49 +9,14 @@
 
 
 # include "csv.h"
+#include "distance_calculations.h"
+#include "point.h"
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 using namespace std;
 
-enum point_type {core, non_core, border, noise};
 double big_number = 9999999;
-
-
-struct point {
-    int id{};
-    int distanceCalculationNumber = 0;
-    double max_eps;
-    double min_eps;
-    point_type type;
-    vector<double> dimensions;
-    vector<int> knn;
-    vector<int> rnn;
-    vector<int> eps_neighborhood;
-};
-
-
-struct distance_x {
-    int id{};
-    double dist{};
-};
-
-struct find_id : std::unary_function<distance_x, bool> {
-    int id;
-
-    find_id(int id) : id(id) {}
-
-    bool operator()(distance_x const &m) const {
-        return m.id == id;
-    }
-};
-
-struct dist_comparator {
-    inline bool operator()(const distance_x &struct1, const distance_x &struct2) {
-        return (struct1.dist < struct2.dist);
-    }
-};
-
 vector<point> points;
 int clusters[100000] = {0};
 bool visited[100000] = {false};
@@ -74,155 +39,8 @@ void
 write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, po::variables_map vm,
                     map<string, double> point_number);
 
-void calculate_knn_optimized(int k, point reference_point);
-
 int DBSCAN(const int &minPts);
 
-
-
-double calculate_distance(const point &point, const struct point &other) {
-    int dimension = point.dimensions.size();
-    double dist = 0;
-    for (int i = 0; i < dimension; i++) {
-        double diff = point.dimensions.at(i) - other.dimensions.at(i);
-        dist += diff * diff;
-    }
-    return sqrt(dist);
-}
-
-vector<distance_x> calculate_distances_for_knn(point p, int distance_number) {
-    vector<distance_x> distances;
-    for (int j = 0; j < distance_number; j++) {
-        point other = points.at(j);
-        double dist = calculate_distance(p, other);
-        distance_x distance;
-        distance.id = j;
-        distance.dist = dist;
-        distances.push_back(distance);
-    }
-    return distances;
-}
-
-template<typename T>
-void print_queue(T q) { // NB: pass by value so the print uses a copy
-    while (!q.empty()) {
-        cout << q.top().id << ' ' << q.top().dist;
-        q.pop();
-    }
-    cout << '\n';
-}
-
-void calculate_knn(int k) {
-    for (int i = 0; i < points.size(); i++) {
-        vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
-
-        sort(distances.begin(), distances.end(), dist_comparator());
-        for (int j = 1; j <= k; j++) {
-            if (points.at(i).id != distances.at(j).id) {
-                points.at(i).knn.push_back(distances.at(j).id);
-
-                points.at(distances.at(j).id).rnn.push_back(i);
-            }
-        }
-    }
-}
-
-void calculate_eps_neighborhood(double eps) {
-    int size = points.size();
-    for (int i = 0; i < size; i++) {
-        vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
-
-        sort(distances.begin(), distances.end(), dist_comparator());
-
-        int j = 0;
-        while ((distances.at(j).dist < eps) && (j < size)) {
-            if (points.at(i).id != distances.at(j).id) {
-                points.at(i).eps_neighborhood.push_back(distances.at(j).id);
-            }
-            j++;
-        }
-    }
-}
-
-void calculate_knn_optimized(vector<distance_x> distances, int distance_idx, int point_id, int k) {
-    int max_index = distances.size() - 1;
-    //TODO: empty queue
-    vector<distance_x> k_dist;
-    int p_idx = distance_idx;
-    priority_queue<distance_x, vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
-    int up = 1;
-    int down = 1;
-    for (int i = 0; i < k; i++) {
-        int up_idx = p_idx - up;
-        int down_idx = p_idx + down;
-        double up_value, down_value;
-
-        if (up_idx < 0) up_value = big_number;
-        else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
-
-        if (down_idx > max_index) down_value = big_number;
-        else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
-
-        point other;
-        if (up_value < down_value) {
-            other = points.at(distances.at(up_idx).id);
-            up++;
-        } else {
-            other = points.at(distances.at(down_idx).id);
-            down++;
-        }
-        distance_x distance;
-        distance.id = other.id;
-        distance.dist = calculate_distance(points.at(point_id), other);
-        queue.push(distance);
-    }
-    points.at(point_id).distanceCalculationNumber += k;
-    double radius = queue.top().dist;
-    points.at(point_id).max_eps = radius;
-
-    while (1) {
-        int up_idx = p_idx - up;
-        int down_idx = p_idx + down;
-        double up_value, down_value;
-
-        if (up_idx < 0) up_value = big_number;
-        else up_value = distances.at(p_idx).dist - distances.at(up_idx).dist;
-
-        if (down_idx > max_index) down_value = big_number;
-        else down_value = distances.at(down_idx).dist - distances.at(p_idx).dist;
-
-        point other;
-        if (up_value < down_value) {
-            if (up_value < radius) {
-                other = points.at(distances.at(up_idx).id);
-                up++;
-            } else break;
-        } else {
-            if (down_value < radius) {
-                other = points.at(distances.at(down_idx).id);
-                down++;
-            } else break;
-        }
-        distance_x distance;
-        distance.id = other.id;
-        distance.dist = calculate_distance(points.at(point_id), other);
-        points.at(point_id).distanceCalculationNumber++;
-
-        queue.push(distance);
-        queue.pop();
-        radius = queue.top().dist;
-    }
-    points.at(point_id).min_eps = radius;
-
-    for (int j = 0; j < k; j++) {
-        if (point_id != queue.top().id) {
-            points.at(point_id).knn.push_back(queue.top().id);
-
-            points.at(queue.top().id).rnn.push_back(point_id);
-        }
-        queue.pop();
-    }
-}
 
 int DBSCRN(int k) {
     vector<int> S_non_core;
@@ -232,7 +50,7 @@ int DBSCRN(int k) {
         if (points.at(i).rnn.size() < k) S_non_core.push_back(i);
         else {
             S_core.push_back(i);
-            points.at(i).type=core;
+            points.at(i).type = core;
             int cluster_to_expand;
             if (clusters[i] != 0) cluster_to_expand = clusters[i];
             else {
@@ -248,7 +66,7 @@ int DBSCRN(int k) {
             clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
         }
     }
-    return cluster_number -1;
+    return cluster_number - 1;
 }
 
 int get_cluster_of_nearest_core_point(int point, const vector<int> &vector) {
@@ -328,7 +146,15 @@ int main(int argc, char *argv[]) {
     input_read_time = clock();
     int cluster_number;
     if (vm["alg"].as<string>() == "DBSCAN") {
-        calculate_eps_neighborhood(vm["eps"].as<double>());
+        if (vm["optimized"].as<bool>()) {
+            point reference_point;
+            for (int i = 0; i < dimensions; i++) {
+                reference_point.dimensions.push_back(reference_values[i]);
+            }
+            calculate_eps_neighborhood_optimized(vm["eps"].as<double>(), reference_point);
+        } else {
+            calculate_eps_neighborhood(vm["eps"].as<double>());
+        }
         cluster_number = DBSCAN(vm["minPts"].as<int>());
     } else {
         int k = vm["k"].as<int>();
@@ -348,17 +174,13 @@ int main(int argc, char *argv[]) {
         }
         rnn_neighbour_time = clock();
 
-        for (int i = 0; i < point_number; i++) {
-            point p = points.at(i);
-            cout << endl;
-            cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
-        }
+
         cluster_number = DBSCRN(k);
     }
     for (int i = 0; i < point_number; i++) {
-        cout << i << " " << clusters[i] << endl;
         point p = points.at(i);
-        cout << "rnn size: " << p.rnn.size() << endl;
+        cout << endl;
+        cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
     }
     clustering_time = clock();
     stats_calculation_time = clock();
@@ -419,18 +241,9 @@ int DBSCAN(const int &minPts) {
             }
             seeds.pop();
         }
-        if(extended_flag)cluster_number++;
+        if (extended_flag)cluster_number++;
     }
     return cluster_number - 1;
-}
-
-void calculate_knn_optimized(int k, point reference_point) {
-    vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-    sort(distances.begin(), distances.end(), dist_comparator());
-    int size = distances.size();
-    for (int i = 0; i < size; i++) {
-        calculate_knn_optimized(distances, i, distances.at(i).id, k);
-    }
 }
 
 void
