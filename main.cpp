@@ -14,17 +14,20 @@
 namespace po = boost::program_options;
 using namespace std;
 
+enum point_type {core, non_core, border, noise};
+double big_number = 9999999;
 
 
 struct point {
     int id{};
-    bool isCore = true;
     int distanceCalculationNumber = 0;
     double max_eps;
     double min_eps;
+    point_type type;
     vector<double> dimensions;
     vector<int> knn;
     vector<int> rnn;
+    vector<int> eps_neighborhood;
 };
 
 
@@ -49,6 +52,11 @@ struct dist_comparator {
     }
 };
 
+vector<point> points;
+int clusters[100000] = {0};
+bool visited[100000] = {false};
+double reference_values[10000] = {big_number};
+const string SEPARATOR = ",";
 
 void DBSCRN_expand_cluster(int i, int k, int cluster_number);
 
@@ -68,12 +76,9 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
 
 void calculate_knn_optimized(int k, point reference_point);
 
-double big_number = 9999999;
-vector<point> points;
-int clusters[100000] = {0};
-bool visited[100000] = {0};
-double reference_values[10000] = {big_number};
-const string SEPARATOR = ",";
+int DBSCAN(const int &minPts);
+
+
 
 double calculate_distance(const point &point, const struct point &other) {
     int dimension = point.dimensions.size();
@@ -118,6 +123,23 @@ void calculate_knn(int k) {
 
                 points.at(distances.at(j).id).rnn.push_back(i);
             }
+        }
+    }
+}
+
+void calculate_eps_neighborhood(double eps) {
+    int size = points.size();
+    for (int i = 0; i < size; i++) {
+        vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
+
+        sort(distances.begin(), distances.end(), dist_comparator());
+
+        int j = 0;
+        while ((distances.at(j).dist < eps) && (j < size)) {
+            if (points.at(i).id != distances.at(j).id) {
+                points.at(i).eps_neighborhood.push_back(distances.at(j).id);
+            }
+            j++;
         }
     }
 }
@@ -172,12 +194,12 @@ void calculate_knn_optimized(vector<distance_x> distances, int distance_idx, int
         point other;
         if (up_value < down_value) {
             if (up_value < radius) {
-                other =  points.at(distances.at(up_idx).id);
+                other = points.at(distances.at(up_idx).id);
                 up++;
             } else break;
         } else {
             if (down_value < radius) {
-                other =  points.at(distances.at(down_idx).id);
+                other = points.at(distances.at(down_idx).id);
                 down++;
             } else break;
         }
@@ -202,7 +224,7 @@ void calculate_knn_optimized(vector<distance_x> distances, int distance_idx, int
     }
 }
 
-auto DBSCRN(int k) {
+int DBSCRN(int k) {
     vector<int> S_non_core;
     vector<int> S_core;
     int cluster_number = 1;
@@ -210,6 +232,7 @@ auto DBSCRN(int k) {
         if (points.at(i).rnn.size() < k) S_non_core.push_back(i);
         else {
             S_core.push_back(i);
+            points.at(i).type=core;
             int cluster_to_expand;
             if (clusters[i] != 0) cluster_to_expand = clusters[i];
             else {
@@ -220,17 +243,12 @@ auto DBSCRN(int k) {
         }
     }
     for (int non_core_point : S_non_core) {
-        points.at(non_core_point).isCore = false;
+        points.at(non_core_point).type = non_core;
         if (clusters[non_core_point] == 0) {
             clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
         }
     }
-    struct result {
-        int cluster_number;
-        int core_points_number;
-        int non_core_points_number;
-    };
-    return result{cluster_number - 1, (int) S_core.size(), (int) S_non_core.size()};
+    return cluster_number -1;
 }
 
 int get_cluster_of_nearest_core_point(int point, const vector<int> &vector) {
@@ -291,7 +309,6 @@ int main(int argc, char *argv[]) {
     start_time = clock();
     ifstream InputFile(vm["in_file"].as<string>());
 
-    int k = vm["k"].as<int>();
     int point_number, dimensions;
     InputFile >> point_number >> dimensions;
 
@@ -309,30 +326,35 @@ int main(int argc, char *argv[]) {
         points.push_back(p);
     }
     input_read_time = clock();
-
-    if (vm["optimized"].as<bool>()) {
-        point reference_point;
-        for (int i = 0; i < dimensions; i++) {
-            reference_point.dimensions.push_back(reference_values[i]);
-        }
+    int cluster_number;
+    if (vm["alg"].as<string>() == "DBSCAN") {
+        calculate_eps_neighborhood(vm["eps"].as<double>());
+        cluster_number = DBSCAN(vm["minPts"].as<int>());
+    } else {
+        int k = vm["k"].as<int>();
+        if (vm["optimized"].as<bool>()) {
+            point reference_point;
+            for (int i = 0; i < dimensions; i++) {
+                reference_point.dimensions.push_back(reference_values[i]);
+            }
 //        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
 //        sort(distances.begin(), distances.end(), dist_comparator());
 //        TODO: not real value - update code
-        sort_by_reference_point_time = clock();
-        calculate_knn_optimized(k, reference_point);
-    } else {
-        sort_by_reference_point_time = clock();
-        calculate_knn(k);
-    }
-    rnn_neighbour_time = clock();
+            sort_by_reference_point_time = clock();
+            calculate_knn_optimized(k, reference_point);
+        } else {
+            sort_by_reference_point_time = clock();
+            calculate_knn(k);
+        }
+        rnn_neighbour_time = clock();
 
-    for (int i = 0; i < point_number; i++) {
-        point p = points.at(i);
-        cout << endl;
-        cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
+        for (int i = 0; i < point_number; i++) {
+            point p = points.at(i);
+            cout << endl;
+            cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
+        }
+        cluster_number = DBSCRN(k);
     }
-    auto[cluster_number, core_points_number, non_core_points_number] = DBSCRN(k);
-
     for (int i = 0; i < point_number; i++) {
         cout << i << " " << clusters[i] << endl;
         point p = points.at(i);
@@ -361,10 +383,45 @@ int main(int argc, char *argv[]) {
             {"#_of_points",           point_number},
             {"#_of_point_dimensions", dimensions},
             {"#_clusters",            cluster_number},
-            {"#_core_points",         core_points_number},
-            {"#_non_core_points",     non_core_points_number}};
+//            {"#_core_points",         core_points_number},
+//            {"#_non_core_points",     non_core_points_number}
+    };
 
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, values);
+}
+
+int DBSCAN(const int &minPts) {
+    int size = points.size();
+    int cluster_number = 1;
+    for (int i = 0; i < size; i++) {
+        queue<int> seeds;
+        bool extended_flag = false;
+
+        if (clusters[i] == 0) {
+            if (points.at(i).eps_neighborhood.size() >= minPts) {
+                clusters[i] = cluster_number;
+                points.at(i).type = core;
+                for (int n: points.at(i).eps_neighborhood) {
+                    seeds.push(n);
+                    extended_flag = true;
+                }
+            }
+        }
+        while (!seeds.empty()) {
+            if (clusters[seeds.front()] == 0) {
+                clusters[seeds.front()] = cluster_number;
+                if (points.at(seeds.front()).eps_neighborhood.size() >= minPts) {
+                    points.at(i).type = core;
+                    for (int n: points.at(seeds.front()).eps_neighborhood) {
+                        seeds.push(n);
+                    }
+                }
+            }
+            seeds.pop();
+        }
+        if(extended_flag)cluster_number++;
+    }
+    return cluster_number - 1;
 }
 
 void calculate_knn_optimized(int k, point reference_point) {
@@ -388,7 +445,7 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
 void write_to_debug_file(int point_number) {
     ofstream DebugFile("../debug_file");
 
-    DebugFile << "id" << SEPARATOR<< "max_eps" << SEPARATOR<< "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
+    DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
     DebugFile << "[knn]" << SEPARATOR << "[rnn]" << endl;
 
     for (int i = 0; i < point_number; i++) {
@@ -415,7 +472,7 @@ void write_to_out_file(int point_number) {
 //    header
     OutFile << "id" << SEPARATOR;
     for (int j = 0; j < dimensions; j++) OutFile << "d" << j << SEPARATOR;
-    OutFile << "distance_calculations" << SEPARATOR<< "is_core" << SEPARATOR << "cluster_id" << endl;
+    OutFile << "distance_calculations" << SEPARATOR << "is_core" << SEPARATOR << "cluster_id" << endl;
 
     for (int i = 0; i < point_number; i++) {
         OutFile << i << SEPARATOR;
@@ -423,7 +480,7 @@ void write_to_out_file(int point_number) {
             OutFile << points.at(i).dimensions.at(j) << SEPARATOR;
         }
         OutFile << points.at(i).distanceCalculationNumber << SEPARATOR
-                << points.at(i).isCore << SEPARATOR
+                << (points.at(i).type == core) << SEPARATOR
                 << clusters[i] << endl;
     }
     OutFile.close();
