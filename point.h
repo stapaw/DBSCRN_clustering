@@ -21,5 +21,7 @@ struct point {
     std::vector<int> eps_neighborhood;
 };
 extern std::vector<point> points;
+extern int clusters[100000];
+extern bool visited[100000];
 
 #endif //CLUSTERING_POINT_H

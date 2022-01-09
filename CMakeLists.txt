@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-add_executable(Clustering main.cpp csv.h distance_calculations.cpp point.h)
+add_executable(Clustering main.cpp DBSCAN.cpp  DBSCRN.cpp distance_calculations.cpp output.cpp csv.h point.h settings.h)
 
 INCLUDE_DIRECTORIES( /home/linuxbrew/.linuxbrew/Cellar/jsoncpp/1.9.4_1/include )
 LINK_DIRECTORIES(  /home/linuxbrew/.linuxbrew/Cellar/jsoncpp/1.9.4_1/lib )

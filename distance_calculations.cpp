@@ -14,6 +14,7 @@
 #include <iostream>
 #include "distance_calculations.h"
 #include "point.h"
+#include "settings.h"
 
 
 double calculate_distance(const point &point, const struct point &other) {
@@ -21,9 +22,9 @@ double calculate_distance(const point &point, const struct point &other) {
     double dist = 0;
     for (int i = 0; i < dimension; i++) {
         double diff = point.dimensions.at(i) - other.dimensions.at(i);
-        dist += diff * diff;
+        dist += pow(diff, settings.minkowski_distance_order);
     }
-    return sqrt(dist);
+    return pow(dist, (1/settings.minkowski_distance_order));
 }
 
 std::vector<distance_x> calculate_distances_for_knn(point p, int distance_number) {
