@@ -24,8 +24,7 @@ const string SEPARATOR = ",";
 vector<string> split(const string &s, char by);
 
 Json::Value
-prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, boost::program_options::variables_map vm,
-                   std::map<string, double> point_number);
+prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, stats stats);
 
 string get_filename_suffix(const boost::program_options::variables_map &vm, int point_number, int dimensions) {
     string filename_suffix = "_";
@@ -55,15 +54,52 @@ std::vector<string> split(const string &ss, char by) {
 }
 
 void
-write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, boost::program_options::variables_map vm,
-                    std::map<string, double> values, const string& filename) {
+write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, stats stats,
+                    const boost::program_options::variables_map& vm, const string &filename) {
     std::ofstream StatsFile(filename);
-    Json::Value stats = prepare_stats_file(clock_phases, time_diffs, number_of_phases, std::move(vm), values);
-    StatsFile << stats;
+    Json::Value output;
+    Json::Value reference_point_values(Json::arrayValue); // TODO
+    reference_point_values.append(Json::Value(4.2));
+    reference_point_values.append(Json::Value(4));
+
+
+    output["main"]["input_filename"] = vm["in_file"].as<string>();
+    output["main"]["#_of_point_dimensions"] = stats.dimensions;
+    output["main"]["#_of_points"] = stats.point_number;
+
+    output["parameters"]["algorithm"] = vm["alg"].as<string>();
+    output["parameters"]["k"] = vm["k"].as<int>();
+    output["parameters"]["Eps"] = vm["eps"].as<double>();
+    output["parameters"]["minPts"] = vm["minPts"].as<int>();
+
+    output["main"]["#_clusters"] = stats.cluster_number;
+    output["main"]["#_noise_points"] = stats.noise_points;
+    output["main"]["#_border_points"] = stats.border_points;
+    output["main"]["#_core_points"] = stats.core_points;
+    output["main"]["#non_core_points"] = stats.non_core_points;
+    output["clustering_stats"]["avg_#_of_distance_calculation"] = stats.avg_dist_calculation;
+
+    output["clustering_stats"]["silhouette_coefficient"] = stats.silhouette;
+    output["clustering_stats"]["davies_bouldin"] = stats.davies_bouldin;
+    //time stats
+    for (int i = 0; i < number_of_phases; i++)
+        output["time_stats"][clock_phases[i]] = time_diffs[i];
+
+
+    // if real cluster known
+    output["clustering_stats"]["TP"] = stats.TP;
+    output["clustering_stats"]["TN"] = stats.TN;
+    output["clustering_stats"]["#_of_pairs"] = stats.number_of_pairs;
+    output["clustering_stats"]["RAND"] = stats.rand;
+    output["clustering_stats"]["Purity"] = stats.purity;
+
+    StatsFile << output;
     StatsFile.close();
+
+    cout << output;
 }
 
-void write_to_debug_file(int point_number, const string& filename) {
+void write_to_debug_file(int point_number, const string &filename) {
     std::ofstream DebugFile(filename);
 
     DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
@@ -87,7 +123,7 @@ void write_to_debug_file(int point_number, const string& filename) {
     DebugFile.close();
 }
 
-void write_to_out_file(int point_number, const string& filename) {
+void write_to_out_file(int point_number, const string &filename) {
     int dimensions = points.at(0).dimensions.size();
     std::ofstream OutFile(filename);
 //    header
@@ -105,47 +141,4 @@ void write_to_out_file(int point_number, const string& filename) {
                 << clusters[i] << std::endl;
     }
     OutFile.close();
-}
-
-Json::Value
-prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, boost::program_options::variables_map vm,
-                   std::map<string, double> values) {
-    Json::Value stats;
-    Json::Value reference_point_values(Json::arrayValue); // TODO
-    reference_point_values.append(Json::Value(4.2));
-    reference_point_values.append(Json::Value(4));
-
-
-    stats["main"]["input_filename"] = vm["in_file"].as<string>();
-    stats["main"]["#_of_point_dimensions"] = values["#_of_point_dimensions"];
-    stats["main"]["#_of_points"] = values["#_of_points"];
-
-    stats["parameters"]["algorithm"] = vm["alg"].as<string>();
-    stats["parameters"]["k"] = vm["k"].as<int>();
-    stats["parameters"]["Eps"] = vm["eps"].as<double>();
-    stats["parameters"]["minPts"] = vm["minPts"].as<int>();
-
-    stats["main"]["#_clusters"] = values["#_clusters"];
-    stats["main"]["#_noise_points"] = 0; // TODO
-    stats["main"]["#_border_points"] = 0; // TODO
-    stats["main"]["#_core_points"] = values["#_core_points"];
-    stats["main"]["#non_core_points"] = values["#non_core_points"];
-    stats["clustering_stats"]["avg_#_of_distance_calculation"] = 0; // TODO
-
-    stats["clustering_stats"]["silhouette_coefficient"] = 0; // TODO
-    stats["clustering_stats"]["davies_bouldin"] = 0; // TODO
-//time stats
-    for (int i = 0; i < number_of_phases; i++)
-        stats["time_stats"][clock_phases[i]] = time_diffs[i];
-
-
-    // if real cluster known
-    stats["clustering_stats"]["TP"] = 0; // TODO
-    stats["clustering_stats"]["TN"] = 0; // TODO
-    stats["clustering_stats"]["#_of_pairs"] = 0; // TODO ???
-    stats["clustering_stats"]["RAND"] = 0; // TODO
-    stats["clustering_stats"]["Purity"] = 0; // TODO
-
-    std::cout << stats << std::endl;
-    return stats;
 }

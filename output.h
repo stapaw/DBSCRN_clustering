@@ -8,13 +8,15 @@
 #include <boost/program_options/variables_map.hpp>
 #include <json/json.h>
 #include<iostream>
+#include "stats.h"
+
 using namespace std;
 
 string get_filename_suffix(const boost::program_options::variables_map &vm, int point_number, int dimensions);
 
 void
-write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, boost::program_options::variables_map vm,
-                    std::map<string, double> point_number, const string& filename);
+write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, stats stats, const boost::program_options::variables_map& vm,
+                    const string &filename);
 
 void write_to_debug_file(int point_number, const string& filename);
 
