@@ -77,7 +77,7 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
     output["main"]["#_border_points"] = stats.border_points;
     output["main"]["#_core_points"] = stats.core_points;
     output["main"]["#non_core_points"] = stats.non_core_points;
-    output["clustering_stats"]["avg_#_of_distance_calculation"] = stats.avg_dist_calculation;// TODO
+    output["clustering_stats"]["avg_#_of_distance_calculation"] = stats.avg_dist_calculation;
 
     output["clustering_stats"]["silhouette_coefficient"] = stats.silhouette;
     output["clustering_stats"]["davies_bouldin"] = stats.davies_bouldin;
