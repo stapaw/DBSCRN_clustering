@@ -11,6 +11,7 @@ struct stats {
     int point_number;
     int dimensions;
     int cluster_number;
+
     int TP;
     int TN;
     int number_of_pairs;
@@ -18,11 +19,13 @@ struct stats {
     double purity;
     double silhouette;
     double davies_bouldin;
+
     int noise_points;
     int border_points;
     int core_points;
     int non_core_points;
-    int avg_dist_calculation;
+
+    double  avg_dist_calculation;
 };
 
 double calculate_davies_bouldin(stats stats);

@@ -14,7 +14,7 @@ struct point {
     int distanceCalculationNumber = 0;
     double max_eps;
     double min_eps;
-    point_type type;
+    point_type type = noise;
     std::vector<double> dimensions;
     std::vector<int> knn;
     std::vector<int> rnn;

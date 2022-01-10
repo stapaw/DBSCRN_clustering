@@ -153,12 +153,30 @@ int main(int argc, char *argv[]) {
     int label;
     while (LabelsFile >> label)ground_truth.push_back(label);
 
-    stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
-    stats.silhouette = calculate_silhouette(point_number);
-    stats.davies_bouldin = calculate_davies_bouldin(stats);
     stats.point_number = point_number;
     stats.dimensions = dimensions;
     stats.cluster_number = cluster_number;
+
+
+    stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
+    stats.silhouette = calculate_silhouette(point_number);
+    stats.davies_bouldin = calculate_davies_bouldin(stats);
+
+    double avg_distance_calculation_number = 0;
+    int point_types[4] = {0};
+    for(int i=0; i<point_number; i++){
+        point p = points.at(i);
+        avg_distance_calculation_number += p.distanceCalculationNumber;
+        if(p.type == noise && clusters[i] != 0 && clusters[i] != -1) p.type = border;
+        point_types[p.type]++;
+    }
+
+    stats.avg_dist_calculation = avg_distance_calculation_number/ point_number;
+    stats.core_points = point_types[core];
+    stats.non_core_points = point_types[non_core];
+    stats.border_points = point_types[border];
+    stats.noise_points = point_types[noise];
+
 
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, stats, vm, "STAT" + filename_suffix);
 }
