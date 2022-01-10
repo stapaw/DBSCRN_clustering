@@ -47,7 +47,7 @@ int DBSCRN(int k) {
 
 int get_cluster_of_nearest_core_point(int point, const std::vector<int> &vector) {
 //    TODO: calculate distances;
-    return -1;
+    return 0;
 }
 
 void DBSCRN_expand_cluster(int i, int k, int cluster_number) {

@@ -37,11 +37,17 @@ struct stats {
     int number_of_pairs;
     double rand;
     double purity;
+    double silhouette;
+    double davies_bouldin;
 };
 
 stats calculate_ground_truth_stats(stats stats, int point_number, const vector<int> &vector);
 
 int get_number_of_pairs(int point_number);
+
+double calculate_silhouette(int i);
+
+double calculate_davies_bouldin();
 
 int main(int argc, char *argv[]) {
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
@@ -168,12 +174,44 @@ int main(int argc, char *argv[]) {
     while (LabelsFile >> label)ground_truth.push_back(label);
 
     stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
+    stats.silhouette = calculate_silhouette(point_number);
+    stats.davies_bouldin = calculate_davies_bouldin();
     stats.point_number = point_number;
     stats.dimensions = dimensions;
     stats.cluster_number = cluster_number;
-    cout << stats.number_of_pairs << " " << "TP: " << stats.TP << " TN: " << stats.TN << " purity: "<< stats.purity << endl;
+    cout << stats.number_of_pairs << " " << "TP: " << stats.TP << " TN: " << stats.TN << " purity: " << stats.purity
+         << endl;
 
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, values, "STAT" + filename_suffix);
+}
+
+double calculate_davies_bouldin() {
+    return 0;
+}
+
+double calculate_silhouette(int point_number) {
+    map<int, double> cluster_distances;
+    map<int, double> cluster_cardinalities;
+    double global_s_i = 0;
+
+    for (int i = 0; i < point_number; i++) {
+        for (int j = 0; j < point_number; j++)
+            if (i != j) {
+                cluster_distances[clusters[j]] += calculate_distance(points.at(i), points.at(j));
+                cluster_cardinalities[clusters[j]] += 1;
+            }
+        double a_i = cluster_distances[clusters[i]] / cluster_cardinalities[clusters[i]];
+        double b_i = big_number;
+        for (auto const &imap: cluster_distances) {
+           if(imap.first != clusters[i]){
+               b_i = min(b_i, imap.second / cluster_cardinalities[imap.first]);
+           }
+        }
+
+        double s_i = (b_i - a_i)/ max(b_i, a_i);
+        global_s_i = (global_s_i * i + s_i) / (i + 1);
+    }
+    return global_s_i;
 }
 
 

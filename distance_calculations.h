@@ -32,4 +32,6 @@ calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_di
 void calculate_knn(int k);
 
 void calculate_knn_optimized(int k, point reference_point);
+
+double calculate_distance(const point &point, const struct point &other);
 #endif //CLUSTERING_DISTANCE_CALCULATIONS_H
