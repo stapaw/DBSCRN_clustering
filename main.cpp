@@ -16,6 +16,7 @@
 #include "DBSCRN.h"
 #include "output.h"
 #include <boost/program_options.hpp>
+#include <utility>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -27,6 +28,17 @@ int clusters[100000] ={0};
 bool visited[100000] = {false};
 double reference_values[10000] = {big_number};
 
+struct stats {
+    int TP;
+    int TN;
+    int number_of_pairs;
+    double rand;
+    double purity;
+};
+
+stats calculate_rand_index(stats stats, int point_number, const vector<int>& vector);
+
+int get_number_of_pairs(int point_number);
 
 int main(int argc, char *argv[]) {
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
@@ -38,6 +50,8 @@ int main(int argc, char *argv[]) {
             ("help", "produce help message")
             ("in_file", po::value<string>()->default_value("../datasets/example.txt"),
              "input filename")
+            ("ground_truth_file", po::value<string>()->default_value("../datasets/ground_truth/example.txt"),
+             "ground truth (cluster labels) filename")
             ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
             ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
             ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
@@ -144,6 +158,56 @@ int main(int argc, char *argv[]) {
 //            {"#_non_core_points",     non_core_points_number}
     };
 
+    stats stats{};
+    vector<int> ground_truth;
+    ifstream LabelsFile(vm["ground_truth_file"].as<string>());
+    int label;
+    while(LabelsFile >> label)ground_truth.push_back(label);
+
+    stats = calculate_rand_index(stats, point_number, ground_truth);
+    cout << stats.number_of_pairs << " " << "TP: " << stats.TP << " TN: " << stats.TN << endl;
+
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, values, "STAT" + filename_suffix);
 }
+
+
+stats calculate_rand_index(stats stats, int point_number, const vector<int>& labels) {
+    map<pair<int,int>, int> clustering;
+    std::vector<pair<int,int>> keys;
+    std::vector<int> vints;
+
+    for(int i=0; i<point_number; i++){
+        clustering[make_pair(clusters[i], labels.at(i))] += 1;
+    }
+
+    for(auto const& imap: clustering){
+        keys.push_back(imap.first);
+        vints.push_back(imap.second);
+    }
+
+    int TP = 0;
+    for(int v:vints){
+        if(v>1){
+            TP += get_number_of_pairs(v);
+        }
+    }
+
+    int TN = 0;
+    int size = keys.size();
+    for(int i=0; i<size; i++){
+        for(int j=1; j<size; j++){
+            if(keys.at(i) != keys.at(j)){
+                TN += vints.at(i) * vints.at(j);
+            }
+        }
+    }
+
+    stats.TP = TP;
+    stats.TN = TN;
+    stats.number_of_pairs = get_number_of_pairs(point_number);
+    stats.rand = (double)(TP + TN) / stats.number_of_pairs;
+    return stats;
+}
+
+int get_number_of_pairs(int point_number) { return (point_number * (point_number - 1)) / 2; }
 
