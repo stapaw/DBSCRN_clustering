@@ -24,11 +24,14 @@ using namespace std;
 double big_number = 9999999;
 vector<point> points;
 struct settings settings;
-int clusters[100000] ={0};
+int clusters[100000] = {0};
 bool visited[100000] = {false};
 double reference_values[10000] = {big_number};
 
 struct stats {
+    int point_number;
+    int dimensions;
+    int cluster_number;
     int TP;
     int TN;
     int number_of_pairs;
@@ -36,7 +39,7 @@ struct stats {
     double purity;
 };
 
-stats calculate_rand_index(stats stats, int point_number, const vector<int>& vector);
+stats calculate_ground_truth_stats(stats stats, int point_number, const vector<int> &vector);
 
 int get_number_of_pairs(int point_number);
 
@@ -162,50 +165,62 @@ int main(int argc, char *argv[]) {
     vector<int> ground_truth;
     ifstream LabelsFile(vm["ground_truth_file"].as<string>());
     int label;
-    while(LabelsFile >> label)ground_truth.push_back(label);
+    while (LabelsFile >> label)ground_truth.push_back(label);
 
-    stats = calculate_rand_index(stats, point_number, ground_truth);
-    cout << stats.number_of_pairs << " " << "TP: " << stats.TP << " TN: " << stats.TN << endl;
+    stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
+    stats.point_number = point_number;
+    stats.dimensions = dimensions;
+    stats.cluster_number = cluster_number;
+    cout << stats.number_of_pairs << " " << "TP: " << stats.TP << " TN: " << stats.TN << " purity: "<< stats.purity << endl;
 
     write_to_stats_file(clock_phases, time_diffs, number_of_phases, vm, values, "STAT" + filename_suffix);
 }
 
 
-stats calculate_rand_index(stats stats, int point_number, const vector<int>& labels) {
-    map<pair<int,int>, int> clustering;
-    std::vector<pair<int,int>> keys;
+stats calculate_ground_truth_stats(stats stats, int point_number, const vector<int> &labels) {
+    map<pair<int, int>, int> clustering;
+    map<int, int> purity_values;
+    std::vector<pair<int, int>> keys;
     std::vector<int> vints;
 
-    for(int i=0; i<point_number; i++){
-        clustering[make_pair(clusters[i], labels.at(i))] += 1;
+    for (int i = 0; i < point_number; i++) {
+        clustering[make_pair(labels.at(i), clusters[i])] += 1;
     }
 
-    for(auto const& imap: clustering){
+    for (auto const &imap: clustering) {
         keys.push_back(imap.first);
         vints.push_back(imap.second);
     }
 
+    int size = keys.size();
+
     int TP = 0;
-    for(int v:vints){
-        if(v>1){
-            TP += get_number_of_pairs(v);
+    for (int i = 0; i < size; i++) {
+        if (vints.at(i) > 1) {
+            TP += get_number_of_pairs(vints.at(i));
         }
+        purity_values[keys.at(i).first] = max(purity_values[keys.at(i).first], vints.at(i));
     }
 
     int TN = 0;
-    int size = keys.size();
-    for(int i=0; i<size; i++){
-        for(int j=1; j<size; j++){
-            if(keys.at(i) != keys.at(j)){
+    for (int i = 0; i < size; i++) {
+        for (int j = 1; j < size; j++) {
+            if (keys.at(i) != keys.at(j)) {
                 TN += vints.at(i) * vints.at(j);
             }
         }
     }
 
+    int purity = 0;
+    for (auto const &imap: clustering) {
+        if (imap.second == purity_values[imap.first.first])purity += imap.second;
+    }
+
     stats.TP = TP;
     stats.TN = TN;
     stats.number_of_pairs = get_number_of_pairs(point_number);
-    stats.rand = (double)(TP + TN) / stats.number_of_pairs;
+    stats.rand = (double) (TP + TN) / stats.number_of_pairs;
+    stats.purity = (double) purity / point_number;
     return stats;
 }
 
