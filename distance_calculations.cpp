@@ -24,7 +24,7 @@ double calculate_distance(const point &point, const struct point &other) {
         double diff = point.dimensions.at(i) - other.dimensions.at(i);
         dist += pow(diff, settings.minkowski_distance_order);
     }
-    return pow(dist, (1/settings.minkowski_distance_order));
+    return pow(dist, ((double)1/settings.minkowski_distance_order)); // sqrt is much faster
 }
 
 std::vector<distance_x> calculate_distances_for_knn(point p, int distance_number) {

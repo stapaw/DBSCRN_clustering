@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     int cluster_number;
     if (vm["alg"].as<string>() == "DBSCAN") {
         if (vm["optimized"].as<bool>()) {
-            point reference_point;
+            point reference_point{};
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     } else {
         int k = vm["k"].as<int>();
         if (vm["optimized"].as<bool>()) {
-            point reference_point;
+            point reference_point{};
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
@@ -138,14 +138,6 @@ int main(int argc, char *argv[]) {
     };
     int number_of_phases = sizeof(clock_phases) / sizeof(*clock_phases);
     for (int i = 0; i < number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
-
-    map<std::string, double> values{
-            {"#_of_points",           point_number},
-            {"#_of_point_dimensions", dimensions},
-            {"#_clusters",            cluster_number},
-//            {"#_core_points",         core_points_number},
-//            {"#_non_core_points",     non_core_points_number}
-    };
 
     stats stats{};
     vector<int> ground_truth;

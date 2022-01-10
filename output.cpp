@@ -37,7 +37,7 @@ string get_filename_suffix(const boost::program_options::variables_map &vm, int 
     if (vm["alg"].as<string>() == "DBSCAN") {
         filename_suffix += "_m" + to_string(vm["minPts"].as<int>()) + "_e" + to_string(vm["eps"].as<double>());
     } else {
-        filename_suffix += "_k" + vm["k"].as<string>();
+        filename_suffix += "_k" + to_string(vm["k"].as<int>());
     }
     filename_suffix += "_rMin.csv";
     return filename_suffix;
