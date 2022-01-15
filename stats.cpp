@@ -131,8 +131,8 @@ stats calculate_ground_truth_stats(stats stats, int point_number, const vector<i
 
     int TN = 0;
     for (int i = 0; i < size; i++) {
-        for (int j = 1; j < size; j++) {
-            if (keys.at(i) != keys.at(j)) {
+        for (int j = i+1; j < size; j++) {
+            if ((keys.at(i).first != keys.at(j).first) && (keys.at(i).second != keys.at(j).second)) {
                 TN += vints.at(i) * vints.at(j);
             }
         }
