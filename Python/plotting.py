@@ -5,7 +5,7 @@ from typing import Union
 
 import seaborn as sns
 
-from utils import Example
+from utils import Point
 
 sns.set_style("darkgrid")
 
@@ -55,15 +55,15 @@ def plot_out_2d(
     plot.get_figure().savefig(str(output_file))
 
 
-def plot_examples_2d(
-    examples: list[Example],
+def plot_points_2d(
+    points: list[Point],
     output_file: Union[Path, str],
 ):
     cluster_ids = [
-        example.cluster_id if example.cluster_id != -1 else 0 for example in examples
+        point.cluster_id if point.cluster_id != -1 else 0 for point in points
     ]
-    x = [e.vals[0] for e in examples]
-    y = [e.vals[1] for e in examples]
+    x = [p.vals[0] for p in points]
+    y = [p.vals[1] for p in points]
 
     output_path = Path(output_file)
     output_path.parent.mkdir(exist_ok=True, parents=True)
@@ -76,12 +76,12 @@ def plot_examples_2d(
         palette=_generate_sample_palette(cluster_ids),
     )
 
-    if len(examples) < 50:
-        for example in examples:
+    if len(points) < 50:
+        for point in points:
             plot.text(
-                example.vals[0],
-                example.vals[1] + 0.1,
-                example.id,
+                point.vals[0],
+                point.vals[1] + 0.1,
+                point.id,
                 horizontalalignment="center",
                 size="medium",
                 color="black",

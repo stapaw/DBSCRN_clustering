@@ -1,37 +1,36 @@
 from collections import defaultdict
 from math import comb
 
-import numpy as np
 from tqdm import tqdm
 
-from utils import Example, distance_fn_generator, get_pairwise_distances
+from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
-def assert_gt_set(examples: list[Example]) -> None:
-    assert all(example.ground_truth is not None for example in examples)
+def assert_gt_set(points: list[Point]) -> None:
+    assert all(p.ground_truth is not None for p in points)
 
 
-def assert_c_id_set(examples: list[Example]) -> None:
-    assert all(example.cluster_id is not None for example in examples)
+def assert_c_id_set(points: list[Point]) -> None:
+    assert all(p.cluster_id is not None for p in points)
 
 
-def purity(examples: list[Example]) -> float:
+def purity(points: list[Point]) -> float:
     """
-    :param examples: List of Examples with cluster_id and ground_truth set.
-    :return: Purity computed for the examples.
+    :param points: List of Points with cluster_id and ground_truth set.
+    :return: Purity computed for the Points.
     """
-    assert_gt_set(examples)
-    assert_c_id_set(examples)
+    assert_gt_set(points)
+    assert_c_id_set(points)
 
     gt_clusters = defaultdict(set)
     discovered_clusters = defaultdict(set)
-    for example in tqdm(examples, desc="Calculating purity..."):
-        gt_clusters[example.ground_truth].add(example.id)
-        discovered_clusters[example.cluster_id].add(example.id)
+    for p in tqdm(points, desc="Calculating purity..."):
+        gt_clusters[p.ground_truth].add(p.id)
+        discovered_clusters[p.cluster_id].add(p.id)
 
     return (
         1
-        / len(examples)
+        / len(points)
         * sum(
             max(len(g.intersection(c)) for c in gt_clusters.values())
             for g in discovered_clusters.values()
@@ -39,51 +38,51 @@ def purity(examples: list[Example]) -> float:
     )
 
 
-def rand(examples: list[Example]) -> tuple[float, int, int, int]:
+def rand(points: list[Point]) -> tuple[float, int, int, int]:
     """
-    :param examples: List of Examples with cluster_id and ground_truth set.
+    :param points: List of Points with cluster_id and ground_truth set.
     :return: Tuple with rand value, |tp|, |tn| and pairs count.
     """
-    assert_gt_set(examples)
-    assert_c_id_set(examples)
+    assert_gt_set(points)
+    assert_c_id_set(points)
 
-    count = comb(len(examples), 2)
+    count = comb(len(points), 2)
     tp = 0
     tn = 0
-    for i in tqdm(range(len(examples)), desc="Calculating RAND..."):
-        for j in range(i + 1, len(examples)):
-            e1 = examples[i]
-            e2 = examples[j]
+    for i in tqdm(range(len(points)), desc="Calculating RAND..."):
+        for j in range(i + 1, len(points)):
+            p1 = points[i]
+            p2 = points[j]
 
-            if e1.cluster_id == e2.cluster_id and e1.ground_truth == e2.ground_truth:
+            if p1.cluster_id == p2.cluster_id and p1.ground_truth == p2.ground_truth:
                 tp += 1
-            if e1.cluster_id != e2.cluster_id and e1.ground_truth != e2.ground_truth:
+            if p1.cluster_id != p2.cluster_id and p1.ground_truth != p2.ground_truth:
                 tn += 1
 
     return (tp + tn) / count, tp, tn, count
 
 
-def pointwise_silhouette_coefficients(examples: list[Example], m: float) -> list[float]:
-    assert_c_id_set(examples)
+def pointwise_silhouette_coefficients(points: list[Point], m: float) -> list[float]:
+    assert_c_id_set(points)
 
     cluster_id_to_cluster_points = defaultdict(set)
 
-    for i, example in enumerate(examples):
-        cluster_id_to_cluster_points[example.cluster_id].add(i)
+    for i, point in enumerate(points):
+        cluster_id_to_cluster_points[point.cluster_id].add(i)
 
-    pairwise_distances = get_pairwise_distances(examples, m)
-    silhouette_coeeficients = [0.0 for _ in range(len(examples))]
-    for i, example in tqdm(
-        enumerate(examples),
+    pairwise_distances = get_pairwise_distances(points, m)
+    silhouette_coeeficients = [0.0 for _ in range(len(points))]
+    for i, point in tqdm(
+        enumerate(points),
         desc="Calculating silhouette coefficients...",
-        total=len(examples),
+        total=len(points),
     ):
-        current_cluster_id = example.cluster_id
+        current_cluster_id = point.cluster_id
         same_cluster_ids = cluster_id_to_cluster_points[current_cluster_id]
         distances = [
             (m if m != i else n, pairwise_distances[(m, n) if m < n else (n, m)])
-            for m in range(len(examples))
-            for n in range(m + 1, len(examples))
+            for m in range(len(points))
+            for n in range(m + 1, len(points))
             if i in (m, n)
         ]
 
@@ -123,13 +122,13 @@ def pointwise_silhouette_coefficients(examples: list[Example], m: float) -> list
 
 
 def cluster_wise_silhouette_coefficients(
-    examples: list[Example], m: float
+    points: list[Point], m: float
 ) -> dict[int, float]:
-    silhouette_coefficients = pointwise_silhouette_coefficients(examples, m)
+    silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
 
     cluster_id_to_cluster_points = defaultdict(set)
-    for i, example in enumerate(examples):
-        cluster_id_to_cluster_points[example.cluster_id].add(i)
+    for i, point in enumerate(points):
+        cluster_id_to_cluster_points[point.cluster_id].add(i)
 
     return {
         cluster_id: sum(silhouette_coefficients[c] for c in coefficients)
@@ -139,35 +138,34 @@ def cluster_wise_silhouette_coefficients(
     }
 
 
-def mean_silhouette_coefficient(examples: list[Example], m: float) -> float:
-    silhouette_coefficients = pointwise_silhouette_coefficients(examples, m)
+def mean_silhouette_coefficient(points: list[Point], m: float) -> float:
+    silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
 
     return sum(silhouette_coefficients) / len(silhouette_coefficients)
 
 
-def davies_bouldin(examples: list[Example], m: float) -> float:
-    assert_c_id_set(examples)
-    assert all(example.cluster_id != -1 for example in examples)
+def davies_bouldin(points: list[Point], m: float) -> float:
+    assert_c_id_set(points)
+    assert all(p.cluster_id != -1 for p in points)
 
     dist_fn = distance_fn_generator(m)
 
     cluster_id_to_cluster_points = defaultdict(set)
-    for i, example in enumerate(examples):
-        cluster_id_to_cluster_points[example.cluster_id].add(i)
+    for i, point in enumerate(points):
+        cluster_id_to_cluster_points[point.cluster_id].add(i)
 
     centroids = {}
     sigmas = {}
     for i, cluster_point_indices in cluster_id_to_cluster_points.items():
-        cluster_examples = [examples[j] for j in cluster_point_indices]
+        cluster_points = [points[j] for j in cluster_point_indices]
         centroid_vals = [
-            sum(example.vals[dim] for example in cluster_examples)
-            / len(cluster_examples)
-            for dim in range(len(examples[0].vals))
+            sum(p.vals[dim] for p in cluster_points) / len(cluster_points)
+            for dim in range(len(points[0].vals))
         ]
-        centroid = Example(id=-1, vals=centroid_vals)
+        centroid = Point(id=-1, vals=centroid_vals)
         centroids[i] = centroid
 
-        centroid_distances = [dist_fn(e, centroid) for e in cluster_examples]
+        centroid_distances = [dist_fn(p, centroid) for p in cluster_points]
         sigma = sum(centroid_distances) / len(centroid_distances)
         sigmas[i] = sigma
 
