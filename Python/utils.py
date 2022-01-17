@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Optional, Union
 
 import seaborn as sns
@@ -79,7 +78,7 @@ class Point:
         return f"{values}\n"
 
 
-def load_examples(dataset_path: str) -> list[Example]:
+def load_points(dataset_path: str) -> list[Point]:
     gt_path = dataset_path.replace("points", "ground_truth")
     with open(dataset_path, "r") as f:
         points_lines = f.readlines()[1:]
@@ -88,12 +87,12 @@ def load_examples(dataset_path: str) -> list[Example]:
 
     assert len(points_lines) == len(gt_lines)
 
-    examples = []
-    for id, (point_line, gt_line) in enumerate(zip(points_lines, gt_lines)):
+    points = []
+    for idx, (point_line, gt_line) in enumerate(zip(points_lines, gt_lines)):
         gt = int(gt_line.strip())
         point_coords = [float(val) for val in point_line.strip().split("\t")]
-        examples.append(Example(id=id, vals=point_coords, ground_truth=gt))
-    return examples
+        points.append(Point(id=idx, vals=point_coords, ground_truth=gt))
+    return points
 
 
 def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:

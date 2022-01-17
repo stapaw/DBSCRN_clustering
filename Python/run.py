@@ -2,7 +2,6 @@ import time
 from pathlib import Path
 
 import click
-
 from clustering_metrics import davies_bouldin, mean_silhouette_coefficient, purity, rand
 from dbscan import dbscan
 from dbscrn import dbscrn
