@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
 import seaborn as sns
@@ -12,6 +13,7 @@ sns.set_style("darkgrid")
 class Point:
     id: Union[str, int]
     vals: list[float]
+    ground_truth: int
     cluster_id: int = 0
     visited: bool = False
     point_type: Optional[int] = None  # -1 for noise, 0 for non_core, 1 for core
@@ -21,7 +23,6 @@ class Point:
     max_eps: Optional[float] = None
     eps_neigbours: Optional[list["Point"]] = None
     calc_ctr: int = 0
-    ground_truth: Optional[str] = None
 
     def __str__(self) -> str:
         return f"{self.id}({', '.join([str(round(val, 3)) for val in self.vals])})"
@@ -78,75 +79,21 @@ class Point:
         return f"{values}\n"
 
 
-def load_points(dataset_path: str) -> list[Point]:
-    if ".tsv" in dataset_path:
-        return read_tsv_points(dataset_path)
-    elif ".arff" in dataset_path:
-        return read_arff_points(dataset_path)
-    elif ".pa" in dataset_path or ".txt" in dataset_path:
-        dataset_path = dataset_path.replace(".txt", "").replace(".pa", "")
-        return read_pa_points(dataset_path)
-    else:
-        raise ValueError("Unknown dataset")
+def load_examples(dataset_path: str) -> list[Example]:
+    gt_path = dataset_path.replace("points", "ground_truth")
+    with open(dataset_path, "r") as f:
+        points_lines = f.readlines()[1:]
+    with open(gt_path, "r") as f:
+        gt_lines = f.readlines()
 
+    assert len(points_lines) == len(gt_lines)
 
-def read_tsv_points(path: Union[str, Path]) -> list[Point]:
-    input_path = Path(path)
-    points = []
-    with input_path.open("r") as f:
-        for line in f:
-            spt = line.strip().split("\t")
-            name = spt[0]
-            vals = [float(val) for val in spt[1:-1]]
-            ground_truth = spt[-1]
-            points.append(Point(id=name, vals=vals, ground_truth=ground_truth))
-    return points
-
-
-def read_arff_points(path: Union[str, Path]) -> list[Point]:
-    input_path = Path(path)
-    with input_path.open("r") as f:
-        lines = [line.strip().lower() for line in f.readlines() if line.strip()]
-
-    start_idx = lines.index("@data") + 1
-    points = []
-    for i, line in enumerate(lines[start_idx:]):
-        spt = line.strip().split(",")
-        name = str(i)
-        vals = [float(val) for val in spt[:-1]]
-        cls = spt[-1]
-        points.append(Point(id=name, vals=vals, ground_truth=cls))
-
-    return points
-
-
-def read_pa_points(path: Union[str, Path]) -> list[Point]:
-    input_path_txt = Path(str(path) + ".txt")
-    input_path_pa = Path(str(path) + ".pa")
-
-    vals = []
-    with input_path_txt.open("r") as f:
-        for line in f.readlines():
-            if line.strip():
-                line = line.strip()
-                spt = line.split(" ")
-                line_vals = [float(el) for el in spt if el.strip()]
-                vals.append(line_vals)
-
-    with input_path_pa.open("r") as f:
-        lines = [line.strip() for line in f.readlines()]
-
-    pa_start_idx = 0
-    for i, line in enumerate(lines):
-        if "-" in line:
-            pa_start_idx = i + 1
-            break
-
-    classes = lines[pa_start_idx:]
-    return [
-        Point(id=i, vals=line_vals, ground_truth=cls)
-        for i, (line_vals, cls) in enumerate(zip(vals, classes))
-    ]
+    examples = []
+    for id, (point_line, gt_line) in enumerate(zip(points_lines, gt_lines)):
+        gt = int(gt_line.strip())
+        point_coords = [float(val) for val in point_line.strip().split("\t")]
+        examples.append(Example(id=id, vals=point_coords, ground_truth=gt))
+    return examples
 
 
 def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
