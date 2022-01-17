@@ -127,6 +127,8 @@ def run(
         f.write("\nClustering stats\n")
         num_clusters = len(set(p.cluster_id for p in points if p.cluster_id > 0))
         f.write(f"\t# clusters: {num_clusters}\n")
+        num_core_points = len([p for p in points if p.point_type == 1])
+        f.write(f"\t# core points: {num_core_points}\n")
         num_noise_points = len([p for p in points if p.point_type == -1])
         f.write(f"\t# noise points: {num_noise_points}\n")
         num_border_points = len([p for p in points if p.point_type == 0])
