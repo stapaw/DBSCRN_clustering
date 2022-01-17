@@ -37,9 +37,9 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("in_file", po::value<string>()->default_value("../datasets/example.txt"),
+            ("in_file", po::value<string>()->default_value("../datasets/points/example.tsv"),
              "input filename")
-            ("ground_truth_file", po::value<string>()->default_value("../datasets/ground_truth/example.txt"),
+            ("ground_truth_file", po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) filename")
             ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
             ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
