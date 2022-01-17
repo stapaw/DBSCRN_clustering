@@ -3,7 +3,7 @@
 
 ### VirtualEnv template
 # Virtualenv
-# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+# http://iamzed.com/f2009/05/07/a-primer-on-virtualenv/
 .Python
 [Bb]in
 [Ii]nclude
@@ -156,3 +156,4 @@ dmypy.json
 cython_debug/
 
 /plots
+/datasets/
