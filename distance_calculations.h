@@ -23,7 +23,7 @@ struct dist_comparator {
 
 void calculate_eps_neighborhood(double eps);
 
-void calculate_eps_neighborhood_optimized(const double &eps, point point);
+void calculate_eps_neighborhood_optimized(const double &eps, std::vector<struct distance_x> distances);
 
 void
 calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_distances, int distance_idx, int point_id,
@@ -31,7 +31,10 @@ calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_di
 
 void calculate_knn(int k);
 
-void calculate_knn_optimized(int k, point reference_point);
+void calculate_knn_optimized(int k, std::vector<struct distance_x> distances);
 
 double calculate_distance(const point &point, const struct point &other);
+
+std::vector<distance_x> sort_by_ref_point(const point &reference_point);
+
 #endif //CLUSTERING_DISTANCE_CALCULATIONS_H

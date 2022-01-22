@@ -97,9 +97,10 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
+            std::vector<distance_x> distances = sort_by_ref_point(reference_point);
             last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
-            calculate_eps_neighborhood_optimized(vm[EPS_PARAM_NAME].as<double>(), reference_point);
+            calculate_eps_neighborhood_optimized(vm[EPS_PARAM_NAME].as<double>(), distances);
         } else {
             calculate_eps_neighborhood(vm[EPS_PARAM_NAME].as<double>());
         }
@@ -116,11 +117,12 @@ int main(int argc, char *argv[]) {
 //        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
 //        sort(distances.begin(), distances.end(), dist_comparator());
 //        TODO: not real value - update code
+            std::vector<distance_x> distances = sort_by_ref_point(reference_point);
             last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
-            calculate_knn_optimized(k, reference_point);
+            calculate_knn_optimized(k, distances);
         } else {
-            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, last_checkpoint_time, stats);
 
             calculate_knn(k);
         }
