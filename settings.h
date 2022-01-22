@@ -12,6 +12,13 @@ struct settings {
 };
 extern settings settings;
 
+static const char *const clock_phases[] = {
+        "1_read_input_file",
+        "2_sort_by_ref_point_distances",
+        "3_eps_neighborhood/rnn_calculation",
+        "4_clustering",
+        "5_stats_calculation", "total_runtime"};
+
 static const char *const K_PARAM_NAME = "k";
 static const char *const EPS_PARAM_NAME = "eps";
 static const char *const MIN_PTS_PARAM_NAME = "minPts";

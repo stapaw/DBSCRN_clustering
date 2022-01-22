@@ -25,14 +25,19 @@ using namespace std;
 double big_number = 9999999;
 vector<point> points;
 struct settings settings;
+
+double get_time_in_sec(clock_t from, clock_t to);
+
+clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats);
+
 int clusters[100000] = {0};
 bool visited[100000] = {false};
 double reference_values[10000] = {big_number};
 
 int main(int argc, char *argv[]) {
-    clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
-    const string clock_phases[] = {"1_read_input_file", "2_sort_by_ref_point_distances", "3_eps_neighborhood/rnn_calculation",
-                                   "4_clustering", "5_stats_calculation", "total_runtime"};
+    clock_t start_time, last_checkpoint_time, current_time;
+//    const string clock_phases[] = {"1_read_input_file", "2_sort_by_ref_point_distances", "3_eps_neighborhood/rnn_calculation",
+//                                   "4_clustering", "5_stats_calculation", "total_runtime"};
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -41,12 +46,13 @@ int main(int argc, char *argv[]) {
              "input filename")
             (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) filename")
-            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBCSRN"), "algorithm name (DBSCAN|DBCSRN)")
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
             (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
-            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true), "If true, TI optimized calculations are enabled");
+            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
+             "If true, TI optimized calculations are enabled");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -57,6 +63,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    stats stats{};
     start_time = clock();
     ifstream InputFile(vm[INPUT_FILE_PARAM_NAME].as<string>());
 
@@ -81,7 +88,8 @@ int main(int argc, char *argv[]) {
     settings.minPts = vm[MIN_PTS_PARAM_NAME].as<int>();
     settings.k = vm[K_PARAM_NAME].as<int>();
 
-    input_read_time = clock();
+    last_checkpoint_time = save_checkpoint_time(start_time, clock(), stats);
+
     int cluster_number;
     if (vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
         if (vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
@@ -89,10 +97,14 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
+            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+
             calculate_eps_neighborhood_optimized(vm[EPS_PARAM_NAME].as<double>(), reference_point);
         } else {
             calculate_eps_neighborhood(vm[EPS_PARAM_NAME].as<double>());
         }
+        last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+
         cluster_number = DBSCAN(vm[MIN_PTS_PARAM_NAME].as<int>());
     } else {
         int k = vm[K_PARAM_NAME].as<int>();
@@ -104,42 +116,25 @@ int main(int argc, char *argv[]) {
 //        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
 //        sort(distances.begin(), distances.end(), dist_comparator());
 //        TODO: not real value - update code
-            sort_by_reference_point_time = clock();
+            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+
             calculate_knn_optimized(k, reference_point);
         } else {
-            sort_by_reference_point_time = clock();
+            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+
             calculate_knn(k);
         }
-        rnn_neighbour_time = clock();
-
+        last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
         cluster_number = DBSCRN(k);
     }
-    for (int i = 0; i < point_number; i++) {
-        point p = points.at(i);
-        cout << endl;
-        cout << p.id << " " << p.dimensions.at(0) << " " << p.dimensions.at(1) << endl;
-    }
-    clustering_time = clock();
-    stats_calculation_time = clock();
+    last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
     string filename_suffix = get_filename_suffix(vm, point_number, dimensions);
     write_to_out_file(point_number, "OUT" + filename_suffix);
     write_to_debug_file(point_number, "DEBUG" + filename_suffix);
 
-    output_write_time = clock();
-    double time_diffs[] = {(double) (input_read_time - start_time) / CLOCKS_PER_SEC,
-                           (double) (sort_by_reference_point_time - input_read_time) / CLOCKS_PER_SEC,
-                           (double) (rnn_neighbour_time - sort_by_reference_point_time) / CLOCKS_PER_SEC,
-                           (double) (clustering_time - rnn_neighbour_time) / CLOCKS_PER_SEC,
-                           (double) (stats_calculation_time - clustering_time) / CLOCKS_PER_SEC,
-                           (double) (output_write_time - stats_calculation_time) / CLOCKS_PER_SEC,
-                           (double) (clock() - start_time) / CLOCKS_PER_SEC
-    };
-    int number_of_phases = sizeof(clock_phases) / sizeof(*clock_phases);
-    for (int i = 0; i < number_of_phases; i++)cout << clock_phases[i] << ": " << time_diffs[i] << endl;
 
-    stats stats{};
     vector<int> ground_truth;
     ifstream LabelsFile(vm[LABELS_FILE_PARAM_NAME].as<string>());
     int label;
@@ -156,21 +151,35 @@ int main(int argc, char *argv[]) {
 
     double avg_distance_calculation_number = 0;
     int point_types[4] = {0};
-    for(int i=0; i<point_number; i++){
+    for (int i = 0; i < point_number; i++) {
         point p = points.at(i);
         avg_distance_calculation_number += p.distanceCalculationNumber;
-        if(p.type == noise && clusters[i] != 0 && clusters[i] != -1) p.type = border;
+        if (p.type == noise && clusters[i] != 0 && clusters[i] != -1) p.type = border;
         point_types[p.type]++;
     }
 
-    stats.avg_dist_calculation = avg_distance_calculation_number/ point_number;
+    stats.avg_dist_calculation = (double) avg_distance_calculation_number / point_number;
     stats.core_points = point_types[core];
     stats.non_core_points = point_types[non_core];
     stats.border_points = point_types[border];
     stats.noise_points = point_types[noise];
 
+    last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
+    stats.time_diffs.push_back(get_time_in_sec(start_time, last_checkpoint_time)); // total
 
-    write_to_stats_file(clock_phases, time_diffs, number_of_phases, stats, vm, "STAT" + filename_suffix);
+    write_to_stats_file(stats, vm, "STAT" + filename_suffix);
+}
+
+clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats) {
+    double time_from_last_checkpoint = get_time_in_sec(from, to);
+    stats.time_diffs.push_back(time_from_last_checkpoint);
+    int index = stats.time_diffs.size()-1;
+    cout << clock_phases[index] << " runtime: " << stats.time_diffs.at(index) << endl;
+    return to;
+}
+
+double get_time_in_sec(clock_t from, clock_t to) {
+    return (double) (to - from) / CLOCKS_PER_SEC;
 }
 
 

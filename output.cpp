@@ -54,8 +54,7 @@ std::vector<string> split(const string &ss, char by) {
 }
 
 void
-write_to_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, stats stats,
-                    const boost::program_options::variables_map &vm, const string &filename) {
+write_to_stats_file(stats stats, const boost::program_options::variables_map &vm, const string &filename) {
     std::ofstream StatsFile(filename);
     Json::Value output;
     Json::Value reference_point_values(Json::arrayValue); // TODO
@@ -92,8 +91,9 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
     output[STATS_CLUSTERING_STATS]["avg_#_of_distance_calculation"] = stats.avg_dist_calculation;
 
     //time stats
+    int number_of_phases = stats.time_diffs.size();
     for (int i = 0; i < number_of_phases; i++)
-        output[STATS_CLUSTERING_TIME][clock_phases[i]] = time_diffs[i];
+        output[STATS_CLUSTERING_TIME][clock_phases[i]] = stats.time_diffs.at(i);
 
     output[STATS_CLUSTERING_METRICS]["silhouette_coefficient"] = stats.silhouette;
     output[STATS_CLUSTERING_METRICS]["davies_bouldin"] = stats.davies_bouldin;
