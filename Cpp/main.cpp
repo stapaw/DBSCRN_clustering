@@ -42,17 +42,17 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/example.tsv"),
-             "input filename")
-            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
-             "ground truth (cluster labels) filename")
+            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("datasets/points/example.tsv"),
+             "input file path")
+            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("datasets/ground_truth/example.tsv"),
+             "ground truth (cluster labels) file path")
             (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
-            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors")
+            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
             (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
-             "If true, TI optimized calculations are enabled");
+             "If true, TI optimized calculations are enabled (true|false)");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
