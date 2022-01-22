@@ -31,22 +31,22 @@ double reference_values[10000] = {big_number};
 
 int main(int argc, char *argv[]) {
     clock_t start_time, input_read_time, sort_by_reference_point_time, rnn_neighbour_time, clustering_time, stats_calculation_time, output_write_time;
-    const string clock_phases[] = {"read input file", "sort by reference point distances", "rnn calculation",
-                                   "clustering", "stats calculation", "write output files", "total"};
+    const string clock_phases[] = {"1_read_input_file", "2_sort_by_ref_point_distances", "3_eps_neighborhood/rnn_calculation",
+                                   "4_clustering", "5_stats_calculation", "total_runtime"};
 
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("in_file", po::value<string>()->default_value("../datasets/points/example.tsv"),
+            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/example.tsv"),
              "input filename")
-            ("ground_truth_file", po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
+            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) filename")
-            ("alg", po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
-            ("k", po::value<int>()->default_value(3), "number of nearest neighbors")
-            ("eps", po::value<double>()->default_value(2), "eps parameter for DBSCAN")
-            ("minPts", po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
-            ("minkowski_order", po::value<int>()->default_value(2), "Minkowski distance order")
-            ("optimized", po::value<bool>()->default_value(true), "run optimized version");
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBCSRN"), "algorithm name (DBSCAN|DBCSRN)")
+            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors")
+            (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
+            (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
+            (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
+            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true), "If true, TI optimized calculations are enabled");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     }
 
     start_time = clock();
-    ifstream InputFile(vm["in_file"].as<string>());
+    ifstream InputFile(vm[INPUT_FILE_PARAM_NAME].as<string>());
 
     int point_number, dimensions;
     InputFile >> point_number >> dimensions;
@@ -76,27 +76,27 @@ int main(int argc, char *argv[]) {
         }
         points.push_back(p);
     }
-    settings.minkowski_distance_order = vm["minkowski_order"].as<int>();
-    settings.eps = vm["eps"].as<double>();
-    settings.minPts = vm["minPts"].as<int>();
-    settings.k = vm["k"].as<int>();
+    settings.minkowski_distance_order = vm[MINKOWSKI_PARAM_NAME].as<int>();
+    settings.eps = vm[EPS_PARAM_NAME].as<double>();
+    settings.minPts = vm[MIN_PTS_PARAM_NAME].as<int>();
+    settings.k = vm[K_PARAM_NAME].as<int>();
 
     input_read_time = clock();
     int cluster_number;
-    if (vm["alg"].as<string>() == "DBSCAN") {
-        if (vm["optimized"].as<bool>()) {
+    if (vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
+        if (vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
             point reference_point{};
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
-            calculate_eps_neighborhood_optimized(vm["eps"].as<double>(), reference_point);
+            calculate_eps_neighborhood_optimized(vm[EPS_PARAM_NAME].as<double>(), reference_point);
         } else {
-            calculate_eps_neighborhood(vm["eps"].as<double>());
+            calculate_eps_neighborhood(vm[EPS_PARAM_NAME].as<double>());
         }
-        cluster_number = DBSCAN(vm["minPts"].as<int>());
+        cluster_number = DBSCAN(vm[MIN_PTS_PARAM_NAME].as<int>());
     } else {
-        int k = vm["k"].as<int>();
-        if (vm["optimized"].as<bool>()) {
+        int k = vm[K_PARAM_NAME].as<int>();
+        if (vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
             point reference_point{};
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 
     stats stats{};
     vector<int> ground_truth;
-    ifstream LabelsFile(vm["ground_truth_file"].as<string>());
+    ifstream LabelsFile(vm[LABELS_FILE_PARAM_NAME].as<string>());
     int label;
     while (LabelsFile >> label)ground_truth.push_back(label);
 
