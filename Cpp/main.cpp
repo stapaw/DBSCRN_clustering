@@ -35,16 +35,14 @@ bool visited[100000] = {false};
 double reference_values[10000] = {big_number};
 
 int main(int argc, char *argv[]) {
-    clock_t start_time, last_checkpoint_time, current_time;
-//    const string clock_phases[] = {"1_read_input_file", "2_sort_by_ref_point_distances", "3_eps_neighborhood/rnn_calculation",
-//                                   "4_clustering", "5_stats_calculation", "total_runtime"};
+    clock_t start_time, last_checkpoint_time;
 
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("datasets/points/example.tsv"),
+            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/example.tsv"),
              "input file path")
-            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("datasets/ground_truth/example.tsv"),
+            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
             (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
             (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
@@ -114,9 +112,6 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < dimensions; i++) {
                 reference_point.dimensions.push_back(reference_values[i]);
             }
-//        vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-//        sort(distances.begin(), distances.end(), dist_comparator());
-//        TODO: not real value - update code
             std::vector<distance_x> distances = sort_by_ref_point(reference_point);
             last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
