@@ -67,7 +67,6 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
     output[STATS_MAIN]["#_dimensions"] = stats.dimensions;
     output[STATS_MAIN]["#_points"] = stats.point_number;
     output[STATS_MAIN][ALGORITHM_PARAM_NAME] = vm[ALGORITHM_PARAM_NAME].as<string>();
-    output[STATS_MAIN][TI_OPTIMIZED_PARAM_NAME] = vm[TI_OPTIMIZED_PARAM_NAME].as<bool>();
 
     if (output[STATS_MAIN][ALGORITHM_PARAM_NAME] == "DBSCAN") {
         output[STATS_PARAMETERS][EPS_PARAM_NAME] = vm[EPS_PARAM_NAME].as<double>();
@@ -76,6 +75,8 @@ write_to_stats_file(const string *clock_phases, const double *time_diffs, int nu
         output[STATS_PARAMETERS][K_PARAM_NAME] = vm[K_PARAM_NAME].as<int>();
     }
     output[STATS_PARAMETERS][MINKOWSKI_PARAM_NAME] = vm[MINKOWSKI_PARAM_NAME].as<int>();
+    output[STATS_PARAMETERS][TI_OPTIMIZED_PARAM_NAME] = vm[TI_OPTIMIZED_PARAM_NAME].as<bool>();
+
 
 
     output[STATS_CLUSTERING_STATS]["#_clusters"] = stats.cluster_number;

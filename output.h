@@ -5,8 +5,8 @@
 #ifndef CLUSTERING_OUTPUT_H
 #define CLUSTERING_OUTPUT_H
 
-static const char *const STATS_MAIN = "main";
-static const char *const STATS_PARAMETERS = "parameters";
+static const char *const STATS_MAIN = "#main";
+static const char *const STATS_PARAMETERS = "#parameters";
 static const char *const STATS_CLUSTERING_STATS = "clustering_stats";
 static const char *const STATS_CLUSTERING_METRICS = "clustering_metrics";
 static const char *const STATS_CLUSTERING_TIME = "clustering_time";
