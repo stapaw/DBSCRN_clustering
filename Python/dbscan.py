@@ -3,21 +3,21 @@ from typing import Optional
 
 from tqdm import tqdm
 
-from utils import Example, get_pairwise_distances
+from utils import Point, get_pairwise_distances
 
 
 def dbscan(
-    examples: list[Example], min_samples: int, eps: float, m: float = 2
-) -> tuple[list[int], dict[str, float]]:
+    points: list[Point], min_samples: int, eps: float, m: float = 2
+) -> dict[str, float]:
     start_time = time.perf_counter()
-    pairwise_distances = get_pairwise_distances(examples, m)
+    pairwise_distances = get_pairwise_distances(points, m)
     pairwise_distances_time = time.perf_counter() - start_time
 
     # Determine core points
     start_time = time.perf_counter()
     eps_neighbours_indices = [
         get_eps_neighbour_indices(i, pairwise_distances, eps)
-        for i in tqdm(range(len(examples)), desc="Calculating core points...")
+        for i in tqdm(range(len(points)), desc="Calculating core points...")
     ]
     core_point_indices = [
         i
@@ -28,17 +28,14 @@ def dbscan(
     core_points_assignment_time = time.perf_counter() - start_time
 
     for i in core_point_indices:
-        examples[i].point_type = 1
+        points[i].point_type = 1
 
     for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices):
-        examples[i].debug_info["eps_neigbours"] = [
-            examples[idx].id for idx in i_eps_neighbours_indices
-        ]
-        examples[i].debug_info["num_eps_neigh"] = len(i_eps_neighbours_indices)
+        points[i].eps_neigbours = [points[idx] for idx in i_eps_neighbours_indices]
 
     # Group core points in clusters
     start_time = time.perf_counter()
-    cluster_ids: list[Optional[int]] = [None for _ in examples]
+    cluster_ids: list[Optional[int]] = [None for _ in points]
     current_cluster_id = 1
     for core_point_idx in tqdm(
         core_point_indices, desc="Assigning core points to clusters..."
@@ -77,7 +74,7 @@ def dbscan(
         for neighbour_index in unassigned_point_eps_neighbours_indices:
             if neighbour_index in core_point_indices:
                 cluster_ids[unassigned_point_index] = cluster_ids[neighbour_index]
-                examples[unassigned_point_index].point_type = 0
+                points[unassigned_point_index].point_type = 0
                 break
     border_points_cluster_assignment_time = time.perf_counter() - start_time
 
@@ -88,16 +85,18 @@ def dbscan(
     final_ids = [c_id if c_id is not None else -1 for c_id in cluster_ids]
     noise_points_assignment_time = time.perf_counter() - start_time
     for idx in noise_point_indices:
-        examples[idx].point_type = -1
+        points[idx].point_type = -1
 
-    runtimes = {
+    for point, cluster_id in zip(points, final_ids):
+        point.cluster_id = cluster_id
+
+    return {
         "Pairwise distance calculation runtime": pairwise_distances_time,
         "Core points assignment runtime": core_points_assignment_time,
         "Cluster expansion from core points runtime": cluster_expansion_from_core_points_time,
         "Border points assignment runtime": border_points_cluster_assignment_time,
         "Noise points assignment runtime": noise_points_assignment_time,
     }
-    return final_ids, runtimes
 
 
 def get_eps_neighbour_indices(

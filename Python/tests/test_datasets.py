@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from utils import load_examples
+from utils import load_points
 
 DATASETS_DIR = Path("datasets") / "points"
 
@@ -28,5 +28,5 @@ def test_datasets(dataset_name: str):
             len(dims) <= 1
         ), f"Line {i + 1} is not consistent with the rest of the file"
 
-    examples = load_examples(str(dataset_path))
+    examples = load_points(str(dataset_path))
     assert len(examples) > 0
