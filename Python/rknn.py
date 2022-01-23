@@ -1,19 +1,16 @@
 from heapq import nsmallest
-from typing import List
+from typing import List, Tuple
 
 from tqdm import tqdm
-
-from utils import Point, distance_fn_generator, get_pairwise_distances
+from utils import Point, distance_fn_generator
 
 
 def set_rknn(
     points: List[Point],
+    pairwise_distances: dict[tuple[int, int], float],
     k: int,
-    m: float,
     k_plus_nn_tolerance: float = 10e-9,
 ) -> None:
-    pairwise_distances = get_pairwise_distances(points, m)
-
     for i in tqdm(range(len(points)), desc="Calculating rK+NN..."):
         point_idx_to_dist = [
             (m if m != i else n, pairwise_distances[(m, n) if m < n else (n, m)])
@@ -62,23 +59,11 @@ def get_knn_indices(
 
 def set_rknn_ti(
     points: List[Point],
+    point_idx_ref_dist: List[Tuple[int, float]],
     k: int,
     m: float = 2.0,
     k_plus_nn_tolerance: float = 10e-9,
 ) -> None:
-    ref_point = Point(id=-1, vals=[0.0 for _ in points[0].vals])
-    dist_fn = distance_fn_generator(m)
-
-    point_idx_ref_dist = sorted(
-        [
-            (i, dist_fn(ref_point, p))
-            for i, p in tqdm(
-                enumerate(points), desc="Calculating reference distances..."
-            )
-        ],
-        key=lambda pair: pair[1],
-    )
-
     for i in tqdm(range(len(points)), desc="Calculating rK+NN using TI..."):
         current_point_idx, current_point_ref_dist = point_idx_ref_dist[i]
         current_point = points[current_point_idx]
@@ -229,47 +214,3 @@ def get_knn_ti_indices(
         current_point.min_eps = eps
 
     return [neighbour_idx for (neighbour_idx, _) in k_plus_nn]
-
-
-def get_nearest_core_point_cluster(
-    point: Point, points: list[Point], ti: bool, m: float = 2.0
-):
-    for p in point.r_k_plus_nn:
-        if p.point_type == 1:
-            return p.cluster_id
-
-    knn_candidates = [point] + [p for p in points if p.point_type == 1]
-    if ti:
-        ref_point = Point(id=-1, vals=[0.0 for _ in points[0].vals])
-        dist_fn = distance_fn_generator(m)
-
-        point_idx_ref_dist = sorted(
-            [
-                (i, dist_fn(ref_point, p))
-                for i, p in
-                    enumerate(knn_candidates)
-            ],
-            key=lambda pair: pair[1],
-        )
-
-        point_ref_idx = [i for i, (j, _) in enumerate(point_idx_ref_dist) if i == j][0]
-        nearest_core_point_idx = get_knn_ti_indices(
-            points=points,
-            point_idx_ref_dist=point_idx_ref_dist,
-            current_point=point,
-            current_point_ref_dist_idx=point_ref_idx,
-            k=2,
-            m=m,
-            k_plus_nn_tolerance=0,
-        )[0]
-    else:
-        dist_fn = distance_fn_generator(m)
-        point_idx_to_dist = [
-            (i, dist_fn(point, knn_candidates[i]))
-            for i in range(1, len(knn_candidates))
-        ]
-
-        nearest_core_point_idx = get_knn_indices(
-            point_idx_to_dist=point_idx_to_dist, k=2, k_plus_nn_tolerance=0
-        )[0]
-    return knn_candidates[nearest_core_point_idx].cluster_id

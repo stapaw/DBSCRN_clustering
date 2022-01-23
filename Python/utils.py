@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 import seaborn as sns
@@ -12,7 +11,7 @@ sns.set_style("darkgrid")
 class Point:
     id: Union[str, int]
     vals: list[float]
-    ground_truth: int
+    ground_truth: int = -1
     cluster_id: int = 0
     visited: bool = False
     point_type: Optional[int] = None  # -1 for noise, 0 for non_core, 1 for core

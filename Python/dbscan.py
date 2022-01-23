@@ -9,7 +9,7 @@ def dbscan(
 ) -> dict[str, float]:
     start_time = time.perf_counter()
     pairwise_distances = get_pairwise_distances(points, m)
-    pairwise_distances_time = time.perf_counter() - start_time
+    point_distance_time = time.perf_counter() - start_time
 
     # Determine core points
     start_time = time.perf_counter()
@@ -17,6 +17,10 @@ def dbscan(
         get_eps_neighbour_indices(i, pairwise_distances, eps)
         for i in range(len(points))
     ]
+    eps_neighbourhood_assignment_time = time.perf_counter() - start_time
+
+    # Group core points in clusters
+    start_time = time.perf_counter()
 
     core_point_indices = [
         i
@@ -24,7 +28,6 @@ def dbscan(
         if len(i_eps_neighbours_indices)
         >= min_samples - 1  # in original algorithm, point belongs to it's own kNN
     ]
-
     core_points = [p for i, p in enumerate(points) if i in core_point_indices]
     non_core_points = [p for i, p in enumerate(points) if i not in core_point_indices]
     for core_point in core_points:
@@ -32,10 +35,6 @@ def dbscan(
     for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices):
         points[i].eps_neigbours = [points[idx] for idx in i_eps_neighbours_indices]
 
-    core_points_assignment_time = time.perf_counter() - start_time
-
-    # Group core points in clusters
-    start_time = time.perf_counter()
     current_cluster_id = 1
     for core_point in tqdm(core_points, desc="Assigning core points to clusters..."):
         if core_point.cluster_id == 0:
@@ -49,10 +48,7 @@ def dbscan(
                 core_point.cluster_id = current_cluster_id
                 current_cluster_id += 1
 
-    cluster_expansion_from_core_points_time = time.perf_counter() - start_time
-
     # Assign cluster indices to non-core points
-    start_time = time.perf_counter()
     for point in tqdm(non_core_points, desc="Assigning non-core points to clusters..."):
         for neighbour in point.eps_neigbours:
             if neighbour.point_type == 1:
@@ -61,13 +57,12 @@ def dbscan(
                 break
             if point.cluster_id == 0:
                 point.point_type = -1
-    non_core_points_processing_time = time.perf_counter() - start_time
+    clustering_time = time.perf_counter() - start_time
 
     return {
-        "Pairwise distance calculation runtime": pairwise_distances_time,
-        "Core points assignment runtime": core_points_assignment_time,
-        "Cluster expansion from core points runtime": cluster_expansion_from_core_points_time,
-        "Border points assignment runtime": non_core_points_processing_time,
+        "2_sort_by_ref_point_distances": point_distance_time,
+        "3_eps_neighborhood/rnn_calculation": eps_neighbourhood_assignment_time,
+        "4_clustering": clustering_time,
     }
 
 
