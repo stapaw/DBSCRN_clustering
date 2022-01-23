@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 
@@ -27,9 +28,16 @@ from utils import Point, load_points
 @click.option(
     "-a",
     "--algorithm",
-    type=click.Choice(["dbscan", "dbscanrn", "dbscanrn_ti"]),
+    type=click.Choice(["dbscan", "dbscrn"]),
     required=True,
     help="Type of algorithm to use.",
+)
+@click.option(
+    "--ti",
+    type=bool,
+    default=False,
+    is_flag=True,
+    help="If True, will use triangle inequality to optimize runtime of the DBSCRN algorithm.",
 )
 @click.option(
     "--plot",
@@ -56,119 +64,101 @@ from utils import Point, load_points
     is_flag=True,
     default=False,
     help="If True, will compute silhouette coefficient for STAT file. "
-    "By default disabled, as this calculation takes very long time.",
+         "By default disabled, as this calculation takes very long time.",
 )
 def run(
-    dataset_path: str,
-    output_dir: Path,
-    algorithm: str,
-    plot: bool,
-    k: int,
-    min_samples: int,
-    eps: float,
-    m_power: float,
-    silhouette: bool,
+        dataset_path: str,
+        output_dir: Path,
+        algorithm: str,
+        ti: bool,
+        plot: bool,
+        k: int,
+        min_samples: int,
+        eps: float,
+        m_power: float,
+        silhouette: bool,
 ):
     start_time = time.perf_counter()
     points: list[Point] = load_points(dataset_path)
-    read_time = time.perf_counter() - start_time
+    runtimes = {"1_read_input_file": time.perf_counter() - start_time}
+
     dataset_name = Path(dataset_path).stem
+    main_info = {
+        "#_dimensions": len(points[0].vals),
+        "#_points": len(points),
+        "input_file": str(dataset_path)
+    }
 
-    start_time = time.perf_counter()
     if algorithm == "dbscan":
-        runtimes = dbscan(points, min_samples=min_samples, eps=eps, m=m_power)
+        alg_runtimes = dbscan(points, min_samples=min_samples, eps=eps, m=m_power)
         output_dir = (
-            output_dir
-            / "dbscan"
-            / dataset_name
-            / f"min_samples_{min_samples}_eps_{eps}_m_{m_power}"
+                output_dir
+                / "dbscan"
+                / dataset_name
+                / f"min_samples_{min_samples}_eps_{eps}_m_{m_power}"
         )
-        stats = {
-            "Algorithm": "DBSCAN",
-            "Minimum samples": min_samples,
-            "Epsilon": eps,
-            "Minkowsky distance power": m_power,
+        main_info["algorithm"] = "DBSCAN"
+        parameters = {
+            "min_samples": min_samples,
+            "eps": eps,
+            "minkowski_power": m_power,
         }
-    elif algorithm == "dbscanrn":
-        runtimes = dbscrn(points, k=k, m=m_power, ti=False)
-        output_dir = output_dir / "dbscanrn" / dataset_name / f"k_{k}_m_{m_power}"
-        stats = {"Algorithm": "DBSCANRN", "K": k, "Minkowsky distance power": m_power}
+    elif algorithm == "dbscrn":
+        alg_runtimes = dbscrn(points, k=k, m=m_power, ti=ti)
+        alg_dir = "dbscrn" if not ti else "dbscrn_ti"
+        output_dir = output_dir / alg_dir / dataset_name / f"k_{k}_m_{m_power}"
+        main_info["algorithm"] = "DBSCRN"
+        parameters = {"TI_optimized": ti, "k": k, "minkowski_power": m_power}
     else:
-        runtimes = dbscrn(points, k=k, m=m_power, ti=True)
-        output_dir = output_dir / "dbscanrn_ti" / dataset_name / f"k_{k}_m_{m_power}"
-        stats = {
-            "Algorithm": "DBSCANRN_TI",
-            "K": k,
-            "Minkowsky distance power": m_power,
-        }
-    execution_time = time.perf_counter() - start_time
+        raise ValueError(f"Unknown algorithm: {algorithm}.")
+    runtimes.update(alg_runtimes)
 
-    start_time = time.perf_counter()
     output_dir.mkdir(parents=True, exist_ok=True)
+
     out_file = output_dir / "OUT.csv"
     with out_file.open("w+") as f:
         dims = ",".join([f"x_{i}" for i in range(len(points[0].vals))])
         header = f"point_id,{dims},#_calcs,point_type,c_id\n"
         f.write(header)
         f.writelines([e.serialize_out() for e in points])
-    stat_file = output_dir / "STAT.txt"
-    with stat_file.open("w+") as f:
-        f.write(
-            f"Input file: {dataset_path}\n"
-            f"\t# dimensions: {len(points[0].vals)}\n"
-            f"\t# points: {len(points)}\n\n"
-        )
-
-        f.write("Parameters\n")
-        for stat_name, stat_value in stats.items():
-            f.write(f"\t{stat_name}: {stat_value}\n")
-
-        f.write("\nClustering stats\n")
-        num_clusters = len(set(p.cluster_id for p in points if p.cluster_id > 0))
-        f.write(f"\t# clusters: {num_clusters}\n")
-        num_core_points = len([p for p in points if p.point_type == 1])
-        f.write(f"\t# core points: {num_core_points}\n")
-        num_noise_points = len([p for p in points if p.point_type == -1])
-        f.write(f"\t# noise points: {num_noise_points}\n")
-        num_border_points = len([p for p in points if p.point_type == 0])
-        f.write(f"\t# border_points: {num_border_points}\n")
-        avg_calculations = sum(p.calc_ctr for p in points) / len(points)
-        f.write(
-            f"\tAverage # of distance / similarity calculations: {avg_calculations}\n"
-        )
-        f.write("\nClustering metrics\n")
-        rand_value, tp, tn, pair_count = rand(points)
-        f.write(f"\tRAND: {rand_value}\n")
-        f.write(f"\t|TP|: {tp}\n")
-        f.write(f"\t|TN|: {tn}\n")
-        f.write(f"\t# of pairs of points: {pair_count}\n")
-        f.write(f"\tPurity: {purity(points)}\n")
-        if silhouette:
-            f.write(
-                f"\tSilhouette coefficient: {(mean_silhouette_coefficient(points, m_power))}\n"
-            )
-        if algorithm != "dbscan":
-            f.write(f"\tDavies-Bouldin: {(davies_bouldin(points, m_power))}\n")
-
-        f.write("\nRuntime\n")
-        f.write(f"\tRead runtime: {read_time}\n")
-        for runtime_key, runtime in runtimes.items():
-            f.write(f"\t{runtime_key}: {runtime}\n")
-        f.write(f"\tTotal algorithm execution runtime: {execution_time}\n")
 
     debug_file = output_dir / "DEBUG.tsv"
     with debug_file.open("w+") as f:
         f.write(points[0].get_serialize_debug_header())
         f.writelines([p.serialize_debug() for p in points])
-        """
-        TODO
-        - maxEps – Eps value calculated based on first k candidates for k+NN of the point (for TI-optimized versions)
-        - minEps is the minimal value of radius Eps within which real k+NN of the point was found (for TI-optimized versions).
-        """
-    write_time = time.perf_counter() - start_time
-    with stat_file.open("a") as f:
-        f.write(f"\tWrite runtime: {write_time}\n")
-        f.write(f"\tTotal runtime: {read_time + execution_time+write_time}\n")
+
+    metrics_computation_start_time = time.perf_counter()
+    clustering_stats = {
+        "#_clusters": len(set(p.cluster_id for p in points if p.cluster_id > 0)),
+        "#_core_points": len([p for p in points if p.point_type == 1]),
+        "#_border_points": len([p for p in points if p.point_type == 0]),
+        "#_noise_points": len([p for p in points if p.point_type == -1]),
+        "avg_#_of_distance_calculation": sum(p.calc_ctr for p in points) / len(points)
+    }
+    rand_value, tp, tn, n_pairs = rand(points)
+    clustering_metrics = {
+        "Purity": purity(points),
+        "davies_bouldin": davies_bouldin(points, m_power),
+        "RAND": rand_value,
+        "TN": tp,
+        "TP": tn,
+        "#_of_pairs": n_pairs,
+    }
+    if silhouette:
+        clustering_metrics["silhouette_coefficient"] = mean_silhouette_coefficient(points, m_power)
+    runtimes["5_stats_calculation"] = time.perf_counter() - metrics_computation_start_time
+    runtimes["total_runtime"] = time.perf_counter() - start_time
+
+    stat_file = output_dir / "STAT.json"
+    with stat_file.open("w+") as f:
+        stat_dict = {
+            "main": main_info,
+            "parameters": parameters,
+            "clustering_metrics": clustering_metrics,
+            "clustering_stats": clustering_stats,
+            "clustering_time": runtimes
+        }
+        json.dump(stat_dict, f)
 
     if plot:
         plot_points_2d(

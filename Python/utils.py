@@ -106,12 +106,15 @@ def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
 
 
 def get_pairwise_distances(
-    points: list[Point], m: float = 2
+    points: list[Point], m: float = 2, verbose: bool = True
 ) -> dict[tuple[int, int], float]:
     dist_fn = distance_fn_generator(m)
 
+    iterator = range(len(points))
+    if verbose:
+        iterator = tqdm(iterator, desc="Calculating pairwise distances...")
     return {
         (i, j): dist_fn(points[i], points[j])
-        for i in tqdm(range(len(points)), desc="Calculating pairwise distances...")
+        for i in iterator
         for j in range(i + 1, len(points))
     }
