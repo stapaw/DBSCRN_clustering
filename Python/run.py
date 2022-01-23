@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from dbscan import dbscan
 from dbscrn import dbscrn
 from plotting import plot_points_2d
 from utils import Point, load_points
+
+sys.path.extend(str(Path(__file__).parent))
 
 
 @click.command()
@@ -37,14 +40,7 @@ from utils import Point, load_points
     type=bool,
     default=False,
     is_flag=True,
-    help="If True, will use triangle inequality to optimize runtime of the DBSCRN algorithm.",
-)
-@click.option(
-    "--plot",
-    type=bool,
-    default=False,
-    is_flag=True,
-    help="If True, will plot results and save them in 'output_dir'.",
+    help="If set, will use triangle inequality to optimize runtime of the DBSCRN algorithm.",
 )
 @click.option("-k", type=int, default=3, help="'k' parameter in DBSCANRN algorithm.")
 @click.option(
@@ -59,11 +55,18 @@ from utils import Point, load_points
     help="Power used in Minkowsky distance function.",
 )
 @click.option(
+    "--plot",
+    type=bool,
+    default=False,
+    is_flag=True,
+    help="If set, will plot results and save them in 'output_dir'.",
+)
+@click.option(
     "--silhouette",
     type=bool,
     is_flag=True,
     default=False,
-    help="If True, will compute silhouette coefficient for STAT file. "
+    help="If set, will compute silhouette coefficient for STAT file. "
          "By default disabled, as this calculation takes very long time.",
 )
 def run(
@@ -158,7 +161,7 @@ def run(
             "clustering_stats": clustering_stats,
             "clustering_time": runtimes
         }
-        json.dump(stat_dict, f)
+        json.dump(stat_dict, f, indent=2)
 
     if plot:
         plot_points_2d(
