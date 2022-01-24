@@ -47,10 +47,10 @@ class Point:
         """
         debug_info = [str(self.id)]
         if self.k_plus_nn is not None:
-            k_plus_nn_ids = [p.id for p in self.r_k_plus_nn]
+            k_plus_nn_ids = sorted(p.id for p in self.k_plus_nn)
             debug_info.append(str(k_plus_nn_ids))
         if self.r_k_plus_nn is not None:
-            r_k_plus_nn_ids = [p.id for p in self.r_k_plus_nn]
+            r_k_plus_nn_ids = sorted(p.id for p in self.r_k_plus_nn)
             debug_info.extend([str(r_k_plus_nn_ids), str(len(r_k_plus_nn_ids))])
         if self.min_eps is not None:
             debug_info.append(str(self.min_eps))
@@ -58,7 +58,7 @@ class Point:
             debug_info.append(str(self.max_eps))
 
         if self.eps_neigbours is not None:
-            eps_neighbours_ids = [p.id for p in self.eps_neigbours]
+            eps_neighbours_ids = sorted(p.id for p in self.eps_neigbours)
             debug_info.extend([str(eps_neighbours_ids), str(len(eps_neighbours_ids))])
 
         values = "\t".join(debug_info)
