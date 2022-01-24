@@ -26,6 +26,7 @@ struct stats {
     int non_core_points;
 
     double  avg_dist_calculation;
+    std::vector<double> time_diffs;
 };
 
 double calculate_davies_bouldin(stats stats);

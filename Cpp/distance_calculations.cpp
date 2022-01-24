@@ -17,6 +17,7 @@
 #include "settings.h"
 
 
+
 double calculate_distance(const point &point, const struct point &other) {
     int dimension = point.dimensions.size();
     double dist = 0;
@@ -150,9 +151,7 @@ void calculate_knn_optimized(std::vector<distance_x> distances, int distance_idx
     }
 }
 
-void calculate_eps_neighborhood_optimized(const double &eps, point reference_point) {
-    std::vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-    sort(distances.begin(), distances.end(), dist_comparator());
+void calculate_eps_neighborhood_optimized(const double &eps, std::vector<distance_x> distances) {
     int size = distances.size();
     for (int i = 0; i < size; i++) {
         calculate_eps_neighborhood_optimized(distances, i, distances.at(i).id, eps);
@@ -183,11 +182,15 @@ calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_di
     }
 }
 
-void calculate_knn_optimized(int k, point reference_point) {
-    std::vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
-    sort(distances.begin(), distances.end(), dist_comparator());
+void calculate_knn_optimized(int k, std::vector<distance_x> distances) {
     int size = distances.size();
     for (int i = 0; i < size; i++) {
         calculate_knn_optimized(distances, i, distances.at(i).id, k);
     }
+}
+
+std::vector<distance_x> sort_by_ref_point(const point &reference_point) {
+    std::vector<distance_x> distances = calculate_distances_for_knn(reference_point, points.size());
+    sort(distances.begin(), distances.end(), dist_comparator());
+    return distances;
 }

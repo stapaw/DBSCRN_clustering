@@ -59,8 +59,7 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
     for (int j = 0; j < S_tmp.size(); j++) {
         int y_k = S_tmp.at(j);
         for (int y_j: points.at(y_k).rnn) {
-            //TODO: change for math pi value
-            if (points.at(y_j).rnn.size() > (2 * k / 3.14)) {
+            if (points.at(y_j).rnn.size() > (2 * k / M_PI)) {
                 for (int p:points.at(y_j).rnn) {
                     if (!visited[p]) {
                         S_tmp.push_back(p);
