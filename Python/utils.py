@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 import seaborn as sns
@@ -12,7 +11,7 @@ sns.set_style("darkgrid")
 class Point:
     id: Union[str, int]
     vals: list[float]
-    ground_truth: int
+    ground_truth: int = -1
     cluster_id: int = 0
     visited: bool = False
     point_type: Optional[int] = None  # -1 for noise, 0 for non_core, 1 for core
@@ -48,10 +47,10 @@ class Point:
         """
         debug_info = [str(self.id)]
         if self.k_plus_nn is not None:
-            k_plus_nn_ids = [p.id for p in self.r_k_plus_nn]
+            k_plus_nn_ids = sorted(p.id for p in self.k_plus_nn)
             debug_info.append(str(k_plus_nn_ids))
         if self.r_k_plus_nn is not None:
-            r_k_plus_nn_ids = [p.id for p in self.r_k_plus_nn]
+            r_k_plus_nn_ids = sorted(p.id for p in self.r_k_plus_nn)
             debug_info.extend([str(r_k_plus_nn_ids), str(len(r_k_plus_nn_ids))])
         if self.min_eps is not None:
             debug_info.append(str(self.min_eps))
@@ -59,7 +58,7 @@ class Point:
             debug_info.append(str(self.max_eps))
 
         if self.eps_neigbours is not None:
-            eps_neighbours_ids = [p.id for p in self.eps_neigbours]
+            eps_neighbours_ids = sorted(p.id for p in self.eps_neigbours)
             debug_info.extend([str(eps_neighbours_ids), str(len(eps_neighbours_ids))])
 
         values = "\t".join(debug_info)
@@ -107,12 +106,15 @@ def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
 
 
 def get_pairwise_distances(
-    points: list[Point], m: float = 2
+    points: list[Point], m: float = 2, verbose: bool = True
 ) -> dict[tuple[int, int], float]:
     dist_fn = distance_fn_generator(m)
 
+    iterator = range(len(points))
+    if verbose:
+        iterator = tqdm(iterator, desc="Calculating pairwise distances...")
     return {
         (i, j): dist_fn(points[i], points[j])
-        for i in tqdm(range(len(points)), desc="Calculating pairwise distances...")
+        for i in iterator
         for j in range(i + 1, len(points))
     }

@@ -1,8 +1,8 @@
-import math
 import time
 
-from rknn import get_nearest_core_point_cluster, set_rknn, set_rknn_ti
-from utils import Point
+from rknn import set_rknn, set_rknn_ti
+from tqdm import tqdm
+from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
 def dbscrn(
@@ -15,60 +15,67 @@ def dbscrn(
     :param ti: If True, uses TI for optimized rk+NN computation.
     """
 
-    start_time = time.perf_counter()
     if ti:
-        set_rknn_ti(points, k=k, m=m)
+        start_time = time.perf_counter()
+
+        ref_point = Point(id=-1, vals=[0.0 for _ in points[0].vals])
+        dist_fn = distance_fn_generator(m)
+
+        point_idx_ref_dist = sorted(
+            [
+                (i, dist_fn(ref_point, p))
+                for i, p in tqdm(
+                    enumerate(points), desc="Calculating reference distances..."
+                )
+            ],
+            key=lambda pair: pair[1],
+        )
+        point_distance_time = time.perf_counter() - start_time
+
+        start_time = time.perf_counter()
+        set_rknn_ti(points=points, point_idx_ref_dist=point_idx_ref_dist, k=k, m=m)
+        rknn_time = time.perf_counter() - start_time
     else:
-        set_rknn(points, k=k, m=m)
-    rknn_computation_time = time.perf_counter() - start_time
+        start_time = time.perf_counter()
+        pairwise_distances = get_pairwise_distances(points, m)
+        point_distance_time = time.perf_counter() - start_time
+
+        start_time = time.perf_counter()
+        set_rknn(points=points, pairwise_distances=pairwise_distances, k=k)
+        rknn_time = time.perf_counter() - start_time
 
     start_time = time.perf_counter()
-    s_core = []
-    s_non_core = []
-    cluster_number = 1
+    core_points = [p for p in points if len(p.r_k_plus_nn) >= k]
+    non_core_points = [p for p in points if len(p.r_k_plus_nn) < k]
+    for core_point in core_points:
+        core_point.point_type = 1
 
-    for point in points:
-        if len(point.r_k_plus_nn) < k:
-            s_non_core.append(point)
-        else:
-            s_core.append(point)
-            point.point_type = 1
+    current_cluster_id = 1
+    for core_point in tqdm(core_points, desc="Assigning core points to clusters..."):
+        if core_point.cluster_id == 0:
+            core_neighbours = [p for p in core_point.r_k_plus_nn if p.point_type == 1]
+            for p in core_neighbours:
+                if p.cluster_id != 0:
+                    core_point.cluster_id = p.cluster_id
+                    break
 
-            if point.cluster_id != 0:
-                cluster_to_expand = point.cluster_id
-            else:
-                cluster_to_expand = cluster_number
-                cluster_number += 1
+            if core_point.cluster_id == 0:
+                core_point.cluster_id = current_cluster_id
+                current_cluster_id += 1
 
-            expand_cluster(point, k, cluster_to_expand)
-    cluster_expansion_time = time.perf_counter() - start_time
-
-    start_time = time.perf_counter()
-    for point in s_non_core:
-        point.point_type = 0
-        if point.cluster_id == 0:
-            point.cluster_id = get_nearest_core_point_cluster(point, points, ti)
-    non_core_points_cluster_assignment_time = time.perf_counter() - start_time
+    # Assign cluster indices to non-core points
+    for point in tqdm(non_core_points, desc="Assigning non-core points to clusters..."):
+        for neighbour in point.r_k_plus_nn:
+            if neighbour.point_type == 1:
+                point.cluster_id = neighbour.cluster_id
+                point.point_type = 0
+                break
+            if point.cluster_id == 0:
+                point.point_type = -1
+    clustering_time = time.perf_counter() - start_time
 
     return {
-        "rk+NN computation runtime": rknn_computation_time,
-        "Cluster expansion from core points runtime": cluster_expansion_time,
-        "Non-core points cluster assignment runtime": non_core_points_cluster_assignment_time,
+        "2_sort_by_ref_point_distances": point_distance_time,
+        "3_eps_neighborhood/rnn_calculation": rknn_time,
+        "4_clustering": clustering_time,
     }
-
-
-def expand_cluster(example: Point, k: int, cluster_number: int) -> None:
-    s_tmp = []
-    example.cluster_id = cluster_number
-    s_tmp.append(example)
-    example.visited = True
-
-    for y_k in s_tmp:
-        for y_j in y_k.r_k_plus_nn:
-            if len(y_j.r_k_plus_nn) > 2 * k / math.pi:
-                for p in y_j.r_k_plus_nn:
-                    if not p.visited:
-                        s_tmp.append(p)
-                        p.visited = True
-            if y_j.cluster_id == 0:
-                y_j.cluster_id = cluster_number
