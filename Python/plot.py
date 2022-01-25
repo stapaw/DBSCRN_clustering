@@ -1,26 +1,25 @@
 from colorsys import hsv_to_rgb
 from math import floor, sqrt
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
+import click
 import seaborn as sns
-
-from utils import Point
 
 sns.set_style("darkgrid")
 
 
 def plot_out_2d(
-    out_file: Union[Path, str],
-    output_file: Union[Path, str],
+    out_file: Union[Path, str], output_file: Union[Path, str], first_line: int = 1
 ):
     point_ids = []
     x = []
     y = []
     cluster_ids = []
+
     with Path(out_file).open("r") as f:
-        _ = f.readline()
-        for line in f:
+        lines = f.readlines()[first_line:]
+        for line in lines:
             if line.strip():
                 line = line.strip()
                 spt = line.split(",")
@@ -55,42 +54,6 @@ def plot_out_2d(
     plot.get_figure().savefig(str(output_file))
 
 
-def plot_points_2d(
-    points: list[Point],
-    output_file: Union[Path, str],
-):
-    cluster_ids = [
-        point.cluster_id if point.cluster_id != -1 else 0 for point in points
-    ]
-    x = [p.vals[0] for p in points]
-    y = [p.vals[1] for p in points]
-
-    output_path = Path(output_file)
-    output_path.parent.mkdir(exist_ok=True, parents=True)
-
-    plot = sns.scatterplot(
-        x=x,
-        y=y,
-        hue=cluster_ids,
-        s=50,
-        palette=_generate_sample_palette(cluster_ids),
-    )
-
-    if len(points) < 50:
-        for point in points:
-            plot.text(
-                point.vals[0],
-                point.vals[1] + 0.1,
-                point.id,
-                horizontalalignment="center",
-                size="medium",
-                color="black",
-                weight="semibold",
-            )
-
-    plot.get_figure().savefig(str(output_file))
-
-
 def _generate_sample_palette(
     cluster_ids: list[int],
 ) -> dict[int, tuple[float, float, float]]:
@@ -105,3 +68,32 @@ def _generate_sample_palette(
         palette[0] = (0.0, 0.0, 0.0)
 
     return palette
+
+
+@click.command("Generate clusters plot from OUT csv file.")
+@click.option(
+    "-i", "--out_file", type=Path, required=True, help="Path to OUT.csv file."
+)
+@click.option(
+    "-o",
+    "--plot_path",
+    type=Path,
+    default=None,
+    help="Path to save output plot. "
+    "If not provided will save plot alongside OUT.csv file.",
+)
+@click.option(
+    "-f",
+    "--first_line",
+    type=int,
+    default=1,
+    help="Index of first line of data in OUT.csv file. Defaults to 1.",
+)
+def plot(out_file: Path, plot_path: Optional[Path], first_line: int) -> None:
+    if plot_path is None:
+        plot_path = out_file.parent / "plot.png"
+    plot_out_2d(out_file, plot_path, first_line)
+
+
+if __name__ == "__main__":
+    plot()

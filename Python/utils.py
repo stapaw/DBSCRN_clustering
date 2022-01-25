@@ -40,22 +40,18 @@ class Point:
     def serialize_debug(self) -> str:
         """
         :return: Returns info for creating debug file.
-        If running DBSCRN, returns:
-            id, k+NN, rk+NN, |rk+NN|, (min_eps, max_eps) - optionally if TI was used
-        If running DBSCAN, returns:
-            id, eps_neighbours, |eps_neighbours|
         """
         debug_info = [str(self.id)]
-        if self.k_plus_nn is not None:
-            k_plus_nn_ids = sorted(p.id for p in self.k_plus_nn)
-            debug_info.append(str(k_plus_nn_ids))
+        if self.max_eps is not None:
+            debug_info.append(str(round(self.max_eps, 3)))
+        if self.min_eps is not None:
+            debug_info.append(str(round(self.min_eps, 3)))
         if self.r_k_plus_nn is not None:
             r_k_plus_nn_ids = sorted(p.id for p in self.r_k_plus_nn)
-            debug_info.extend([str(r_k_plus_nn_ids), str(len(r_k_plus_nn_ids))])
-        if self.min_eps is not None:
-            debug_info.append(str(self.min_eps))
-        if self.max_eps is not None:
-            debug_info.append(str(self.max_eps))
+            k_plus_nn_ids = sorted(p.id for p in self.k_plus_nn)
+            debug_info.append(str(len(r_k_plus_nn_ids)))
+            debug_info.append(str(k_plus_nn_ids))
+            debug_info.append(str(r_k_plus_nn_ids))
 
         if self.eps_neigbours is not None:
             eps_neighbours_ids = sorted(p.id for p in self.eps_neigbours)
@@ -67,9 +63,9 @@ class Point:
     def get_serialize_debug_header(self) -> str:
         keys = ["id"]
         if self.r_k_plus_nn is not None:
-            keys.extend(["k+NN", "rk+NN", "|rk+NN|"])
             if self.min_eps is not None:
-                keys.extend(["min_eps", "max_eps"])
+                keys.extend(["max_eps", "min_eps"])
+            keys.extend(["|rk+NN|", "k+NN", "rk+NN"])
         else:
             keys.extend(["eps_neighbours", "|eps_neighbours|"])
 

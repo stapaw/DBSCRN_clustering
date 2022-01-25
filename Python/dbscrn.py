@@ -1,5 +1,7 @@
+import math
 import time
 
+from dbscan import assign_clusters_dbscan
 from rknn import set_rknn, set_rknn_ti
 from tqdm import tqdm
 from utils import Point, distance_fn_generator, get_pairwise_distances
@@ -18,7 +20,8 @@ def dbscrn(
     if ti:
         start_time = time.perf_counter()
 
-        ref_point = Point(id=-1, vals=[0.0 for _ in points[0].vals])
+        min_point = [min(p.vals[i] for p in points) for i in range(len(points[0].vals))]
+        ref_point = Point(id=-1, vals=min_point)
         dist_fn = distance_fn_generator(m)
 
         point_idx_ref_dist = sorted(
@@ -47,31 +50,12 @@ def dbscrn(
     start_time = time.perf_counter()
     core_points = [p for p in points if len(p.r_k_plus_nn) >= k]
     non_core_points = [p for p in points if len(p.r_k_plus_nn) < k]
-    for core_point in core_points:
-        core_point.point_type = 1
 
-    current_cluster_id = 1
-    for core_point in tqdm(core_points, desc="Assigning core points to clusters..."):
-        if core_point.cluster_id == 0:
-            core_neighbours = [p for p in core_point.r_k_plus_nn if p.point_type == 1]
-            for p in core_neighbours:
-                if p.cluster_id != 0:
-                    core_point.cluster_id = p.cluster_id
-                    break
-
-            if core_point.cluster_id == 0:
-                core_point.cluster_id = current_cluster_id
-                current_cluster_id += 1
-
-    # Assign cluster indices to non-core points
-    for point in tqdm(non_core_points, desc="Assigning non-core points to clusters..."):
-        for neighbour in point.r_k_plus_nn:
-            if neighbour.point_type == 1:
-                point.cluster_id = neighbour.cluster_id
-                point.point_type = 0
-                break
-            if point.cluster_id == 0:
-                point.point_type = -1
+    assign_clusters_dbscan(
+        core_points=core_points,
+        non_core_points=non_core_points,
+        neighbours_getter=lambda p: p.r_k_plus_nn,
+    )
     clustering_time = time.perf_counter() - start_time
 
     return {

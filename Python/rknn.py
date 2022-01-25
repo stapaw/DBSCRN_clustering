@@ -39,7 +39,7 @@ def set_rknn(
             )[0]
         k_plus_nn_indices = [neighbour_idx for (neighbour_idx, _) in k_plus_nn]
 
-        points[i].k_plus_nn = [points[idx] for idx in k_plus_nn_indices]
+        points[i].k_plus_nn = [points[idx] for idx in k_plus_nn_indices] + [points[i]]
         for idx in k_plus_nn_indices:
             if points[idx].r_k_plus_nn is None:
                 points[idx].r_k_plus_nn = [points[i]]
@@ -73,8 +73,10 @@ def set_rknn_ti(
         candidate_point_real_dist: list[tuple[int, float]] = []
         eps = 0.0
         stop_search = False
-        while len(candidate_point_real_dist) < k - 1 or not stop_search:
-            if len(candidate_point_real_dist) == k - 1:
+        k_corrected = k - 1  # account for point being it's own kNN
+
+        while len(candidate_point_real_dist) < k_corrected or not stop_search:
+            if len(candidate_point_real_dist) == k_corrected:
                 eps = max(candidate_point_real_dist, key=lambda pair: pair[1])[1]
                 current_point.max_eps = eps
 
@@ -112,7 +114,10 @@ def set_rknn_ti(
             else:
                 current_ref_dist_idx = i - prev_idx_diff
 
-            if len(candidate_point_real_dist) >= k - 1 and pessimistic_estimation > eps:
+            if (
+                len(candidate_point_real_dist) >= k_corrected
+                and pessimistic_estimation > eps
+            ):
                 stop_search = True
 
             else:
@@ -122,7 +127,7 @@ def set_rknn_ti(
                     current_point, current_candidate_point
                 )
 
-                if len(candidate_point_real_dist) < k - 1:
+                if len(candidate_point_real_dist) < k_corrected:
                     candidate_point_real_dist.append(
                         (current_candidate_idx, current_point_real_dist)
                     )
@@ -135,13 +140,10 @@ def set_rknn_ti(
                         candidate_point_real_dist.append(
                             (current_candidate_idx, current_point_real_dist)
                         )
-
-                        eps = max(
-                            nsmallest(
-                                k,
-                                [dist for _, dist in candidate_point_real_dist],
-                            )
-                        )
+                        eps = nsmallest(
+                            k_corrected,
+                            [dist for _, dist in candidate_point_real_dist],
+                        )[-1]
                 if go_next:
                     next_idx_diff += 1
                     search_next = (i + next_idx_diff) <= (len(points) - 1)
@@ -150,15 +152,15 @@ def set_rknn_ti(
                     search_prev = (i - prev_idx_diff) >= 0
 
         # Determine final k+NN
-        if len(candidate_point_real_dist) > k - 1:
+        if len(candidate_point_real_dist) > k_corrected:
             sorted_candidate_idx_to_real_dist = sorted(
                 candidate_point_real_dist, key=lambda pair: pair[1]
             )
-            k_plus_nn_idx_dist = sorted_candidate_idx_to_real_dist[: k - 1]
+            k_plus_nn_idx_dist = sorted_candidate_idx_to_real_dist[:k_corrected]
             for (
                 candidate_idx,
                 candidate_dist,
-            ) in sorted_candidate_idx_to_real_dist[k - 1 :]:
+            ) in sorted_candidate_idx_to_real_dist[k_corrected:]:
                 if (
                     abs(k_plus_nn_idx_dist[-1][1] - candidate_dist)
                     <= k_plus_nn_tolerance
@@ -178,7 +180,7 @@ def set_rknn_ti(
             else:
                 neighbour.r_k_plus_nn.append(current_point)
 
-        current_point.k_plus_nn = k_plus_nn
+        current_point.k_plus_nn = k_plus_nn + [current_point]
 
     for point in points:
         if point.r_k_plus_nn is None:

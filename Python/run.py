@@ -7,7 +7,7 @@ import click
 from clustering_metrics import davies_bouldin, mean_silhouette_coefficient, purity, rand
 from dbscan import dbscan
 from dbscrn import dbscrn
-from plotting import plot_points_2d
+from plot import plot_out_2d
 from utils import Point, load_points
 
 sys.path.extend(str(Path(__file__).parent))
@@ -67,19 +67,19 @@ sys.path.extend(str(Path(__file__).parent))
     is_flag=True,
     default=False,
     help="If set, will compute silhouette coefficient for STAT file. "
-         "By default disabled, as this calculation takes very long time.",
+    "By default disabled, as this calculation takes very long time.",
 )
 def run(
-        dataset_path: str,
-        output_dir: Path,
-        algorithm: str,
-        ti: bool,
-        plot: bool,
-        k: int,
-        min_samples: int,
-        eps: float,
-        m_power: float,
-        silhouette: bool,
+    dataset_path: str,
+    output_dir: Path,
+    algorithm: str,
+    ti: bool,
+    plot: bool,
+    k: int,
+    min_samples: int,
+    eps: float,
+    m_power: float,
+    silhouette: bool,
 ):
     start_time = time.perf_counter()
     points: list[Point] = load_points(dataset_path)
@@ -89,16 +89,16 @@ def run(
     main_info = {
         "#_dimensions": len(points[0].vals),
         "#_points": len(points),
-        "input_file": str(dataset_path)
+        "input_file": str(dataset_path),
     }
 
     if algorithm == "dbscan":
         alg_runtimes = dbscan(points, min_samples=min_samples, eps=eps, m=m_power)
         output_dir = (
-                output_dir
-                / "dbscan"
-                / dataset_name
-                / f"min_samples_{min_samples}_eps_{eps}_m_{m_power}"
+            output_dir
+            / "dbscan"
+            / dataset_name
+            / f"min_samples_{min_samples}_eps_{eps}_m_{m_power}"
         )
         main_info["algorithm"] = "DBSCAN"
         parameters = {
@@ -136,7 +136,7 @@ def run(
         "#_core_points": len([p for p in points if p.point_type == 1]),
         "#_border_points": len([p for p in points if p.point_type == 0]),
         "#_noise_points": len([p for p in points if p.point_type == -1]),
-        "avg_#_of_distance_calculation": sum(p.calc_ctr for p in points) / len(points)
+        "avg_#_of_distance_calculation": sum(p.calc_ctr for p in points) / len(points),
     }
     rand_value, tp, tn, n_pairs = rand(points)
     clustering_metrics = {
@@ -148,8 +148,12 @@ def run(
         "#_of_pairs": n_pairs,
     }
     if silhouette:
-        clustering_metrics["silhouette_coefficient"] = mean_silhouette_coefficient(points, m_power)
-    runtimes["5_stats_calculation"] = time.perf_counter() - metrics_computation_start_time
+        clustering_metrics["silhouette_coefficient"] = mean_silhouette_coefficient(
+            points, m_power
+        )
+    runtimes["5_stats_calculation"] = (
+        time.perf_counter() - metrics_computation_start_time
+    )
     runtimes["total_runtime"] = time.perf_counter() - start_time
 
     stat_file = output_dir / "STAT.json"
@@ -159,13 +163,13 @@ def run(
             "parameters": parameters,
             "clustering_metrics": clustering_metrics,
             "clustering_stats": clustering_stats,
-            "clustering_time": runtimes
+            "clustering_time": runtimes,
         }
         json.dump(stat_dict, f, indent=2)
 
     if plot:
-        plot_points_2d(
-            points=points,
+        plot_out_2d(
+            out_file,
             output_file=output_dir / "plot.png",
         )
 
