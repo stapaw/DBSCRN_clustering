@@ -42,10 +42,12 @@ std::vector<distance_x> calculate_distances_for_knn(point p, int distance_number
 }
 
 void calculate_knn(int k) {
-    for (int i = 0; i < points.size(); i++) {
-        std::vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
-
+    int size = points.size();
+    for (int i = 0; i < size; i++) {
+        std::vector<distance_x> distances = calculate_distances_for_knn(points.at(i), size);
         sort(distances.begin(), distances.end(), dist_comparator());
+
+        points.at(i).distanceCalculationNumber += size;
         for (int j = 1; j <= k; j++) {
             if (points.at(i).id != distances.at(j).id) {
                 points.at(i).knn.push_back(distances.at(j).id);
@@ -62,7 +64,7 @@ void calculate_eps_neighborhood(double eps) {
         std::vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
 
         sort(distances.begin(), distances.end(), dist_comparator());
-
+        points.at(i).distanceCalculationNumber += size;
         int j = 0;
         while ((j < size) && (distances.at(j).dist <= eps)) {
             points.at(i).eps_neighborhood.push_back(distances.at(j).id);
@@ -73,7 +75,6 @@ void calculate_eps_neighborhood(double eps) {
 
 void calculate_knn_optimized(std::vector<distance_x> distances, int distance_idx, int point_id, int k) {
     int max_index = distances.size() - 1;
-    //TODO: empty queue
     std::vector<distance_x> k_dist;
     int p_idx = distance_idx;
     std::priority_queue<distance_x, std::vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
@@ -163,8 +164,10 @@ calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_di
                                      double eps) {
 
     int j = distance_idx;
+    points.at(point_id).distanceCalculationNumber +=1;
     while ((j >= 0) && ((reference_distances.at(distance_idx).dist - reference_distances.at(j).dist) <= eps)) {
         double dist = calculate_distance(points.at(point_id), points.at(reference_distances.at(j).id));
+        points.at(point_id).distanceCalculationNumber +=1;
         if (dist <= eps) {
             points.at(point_id).eps_neighborhood.push_back(reference_distances.at(j).id);
         }
@@ -175,6 +178,7 @@ calculate_eps_neighborhood_optimized(std::vector<struct distance_x> reference_di
     int max_index = reference_distances.size() - 1;
     while ((j <= max_index) && ((reference_distances.at(j).dist - reference_distances.at(distance_idx).dist) <= eps)) {
         double dist = calculate_distance(points.at(point_id), points.at(reference_distances.at(j).id));
+        points.at(point_id).distanceCalculationNumber +=1;
         if (dist <= eps) {
             points.at(point_id).eps_neighborhood.push_back(reference_distances.at(j).id);
         }

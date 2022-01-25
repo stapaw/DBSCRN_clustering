@@ -46,7 +46,7 @@ int DBSCRN(int k) {
 }
 
 int get_cluster_of_nearest_core_point(int point, const std::vector<int> &vector) {
-//    TODO: calculate distances;
+//  currently implemented base method modification - those points are treated as outliers;
     return 0;
 }
 
