@@ -42,10 +42,9 @@ void calculate_knn(int k) {
         sort(distances.begin(), distances.end(), dist_comparator());
 
         points.at(i).distanceCalculationNumber += size;
-        for (int j = 1; j <= k; j++) {
-            if (points.at(i).id != distances.at(j).id) {
+        for (int j = 0; j < k; j++) {
                 points.at(i).knn.push_back(distances.at(j).id);
-
+            if (points.at(i).id != distances.at(j).id) {
                 points.at(distances.at(j).id).rnn.push_back(i);
             }
         }
@@ -72,9 +71,14 @@ void calculate_knn_optimized(std::vector<distance_x> distances, int distance_idx
     std::vector<distance_x> k_dist;
     int p_idx = distance_idx;
     std::priority_queue<distance_x, std::vector<distance_x>, dist_comparator> queue(k_dist.begin(), k_dist.end());
+//    push self distance:
+    distance_x distance;
+    distance.id = point_id;
+    distance.dist = 0.0;
+    queue.push(distance);
     int up = 1;
     int down = 1;
-    for (int i = 0; i < k; i++) {
+    for (int i = 0; i < k-1; i++) {
         int up_idx = p_idx - up;
         int down_idx = p_idx + down;
         double up_value, down_value;
@@ -137,9 +141,9 @@ void calculate_knn_optimized(std::vector<distance_x> distances, int distance_idx
     points.at(point_id).min_eps = radius;
 
     for (int j = 0; j < k; j++) {
-        if (point_id != queue.top().id) {
-            points.at(point_id).knn.push_back(queue.top().id);
+        points.at(point_id).knn.push_back(queue.top().id);
 
+        if (point_id != queue.top().id) {
             points.at(queue.top().id).rnn.push_back(point_id);
         }
         queue.pop();
