@@ -1,22 +1,10 @@
 //
 // Created by stanislaw on 08.01.2022.
 //
-
-#include <boost/program_options.hpp>
-#include "DBSCAN.h"
-#include "settings.h"
-#include "point.h"
-#include "distance_calculations.h"
-# include "csv.h"
-#include <functional>
-#include <json/writer.h>
-#include <json/value.h>
-#include <time.h>
-#include <fstream>
-#include <queue>
-#include<cmath>
-#include <iostream>
 #include "DBSCRN.h"
+#include "point.h"
+#include<cmath>
+
 
 int DBSCRN(int k) {
     std::vector<int> S_non_core;

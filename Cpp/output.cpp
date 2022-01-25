@@ -4,18 +4,12 @@
 
 #include <boost/program_options.hpp>
 #include "DBSCRN.h"
-#include "DBSCAN.h"
 #include "settings.h"
 #include "point.h"
-#include "distance_calculations.h"
-# include "csv.h"
 #include <functional>
 #include <json/writer.h>
 #include <json/value.h>
-#include <time.h>
 #include <fstream>
-#include <queue>
-#include<cmath>
 #include <iostream>
 #include "output.h"
 

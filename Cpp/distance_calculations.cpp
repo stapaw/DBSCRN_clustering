@@ -4,14 +4,8 @@
 
 #include <boost/program_options.hpp>
 # include "csv.h"
-#include <functional>
-#include <json/writer.h>
-#include <json/value.h>
-#include <time.h>
-#include <fstream>
 #include <queue>
 #include<cmath>
-#include <iostream>
 #include "distance_calculations.h"
 #include "point.h"
 #include "settings.h"

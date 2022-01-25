@@ -1,23 +1,16 @@
 #include <iostream>
-#include<cmath>
-#include <queue>
 #include <fstream>
-#include <time.h>
-#include <json/value.h>
-#include <json/writer.h>
+#include <ctime>
 #include <functional>
-
-
-# include "csv.h"
+#include "settings.h"
+#include <vector>
 #include "distance_calculations.h"
 #include "point.h"
-#include "settings.h"
 #include "DBSCAN.h"
 #include "DBSCRN.h"
 #include "output.h"
 #include "stats.h"
 #include <boost/program_options.hpp>
-#include <utility>
 
 namespace po = boost::program_options;
 using namespace std;
