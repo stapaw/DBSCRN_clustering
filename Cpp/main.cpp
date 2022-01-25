@@ -1,23 +1,16 @@
 #include <iostream>
-#include<cmath>
-#include <queue>
 #include <fstream>
-#include <time.h>
-#include <json/value.h>
-#include <json/writer.h>
+#include <ctime>
 #include <functional>
-
-
-# include "csv.h"
+#include "settings.h"
+#include <vector>
 #include "distance_calculations.h"
 #include "point.h"
-#include "settings.h"
 #include "DBSCAN.h"
 #include "DBSCRN.h"
 #include "output.h"
 #include "stats.h"
 #include <boost/program_options.hpp>
-#include <utility>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -44,7 +37,7 @@ int main(int argc, char *argv[]) {
              "input file path")
             (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
-            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBCSRN)")
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBCSRN)")
             (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")

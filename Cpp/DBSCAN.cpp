@@ -3,19 +3,9 @@
 //
 
 #include <boost/program_options.hpp>
-#include "settings.h"
 #include "point.h"
-#include "distance_calculations.h"
-# include "csv.h"
-#include <functional>
-#include <json/writer.h>
-#include <json/value.h>
-#include <time.h>
-#include <fstream>
 #include <queue>
-#include<cmath>
-#include <iostream>
-#include "DBSCAN.h"
+
 
 int DBSCAN(const int &minPts) {
     int size = points.size();
