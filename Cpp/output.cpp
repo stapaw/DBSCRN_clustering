@@ -29,11 +29,12 @@ string get_filename_suffix(const boost::program_options::variables_map &vm, int 
     filename_suffix += splitted.at(splitted.size() - 1);
     filename_suffix += "_D" + to_string(dimensions) + "_R" + to_string(point_number);
     if (vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
-        filename_suffix += "_m" + to_string(vm[MIN_PTS_PARAM_NAME].as<int>()) + "_e" + to_string(vm[EPS_PARAM_NAME].as<double>());
+        filename_suffix += "_minPts" + to_string(vm[MIN_PTS_PARAM_NAME].as<int>()) + "_e" + to_string(vm[EPS_PARAM_NAME].as<double>());
     } else {
         filename_suffix += "_k" + to_string(vm[K_PARAM_NAME].as<int>());
     }
-    filename_suffix += "_rMin.csv";
+    filename_suffix += "_minkowski" + to_string(vm[MINKOWSKI_PARAM_NAME].as<int>());
+    filename_suffix += "_refMin.csv";
     return filename_suffix;
 }
 
@@ -51,10 +52,10 @@ void
 write_to_stats_file(stats stats, const boost::program_options::variables_map &vm, const string &filename) {
     std::ofstream StatsFile(filename);
     Json::Value output;
-    Json::Value reference_point_values(Json::arrayValue); // TODO
-    reference_point_values.append(Json::Value(4.2));
-    reference_point_values.append(Json::Value(4));
-
+    Json::Value reference_point_values(Json::arrayValue);
+    for(int i=0; i<stats.dimensions; i++){
+        reference_point_values.append(Json::Value(reference_values[i]));
+    }
 
     output[STATS_MAIN][INPUT_FILE_PARAM_NAME] = vm[INPUT_FILE_PARAM_NAME].as<string>();
     output[STATS_MAIN]["#_dimensions"] = stats.dimensions;
@@ -69,7 +70,7 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
     }
     output[STATS_PARAMETERS][MINKOWSKI_PARAM_NAME] = vm[MINKOWSKI_PARAM_NAME].as<int>();
     output[STATS_PARAMETERS][TI_OPTIMIZED_PARAM_NAME] = vm[TI_OPTIMIZED_PARAM_NAME].as<bool>();
-
+    output[STATS_PARAMETERS]["reference_point_values"] = reference_point_values;
 
 
     output[STATS_CLUSTERING_STATS]["#_clusters"] = stats.cluster_number;
