@@ -31,8 +31,6 @@ def dbscan(
     ]
     core_points = [p for i, p in enumerate(points) if i in core_point_indices]
     non_core_points = [p for i, p in enumerate(points) if i not in core_point_indices]
-    for core_point in core_points:
-        core_point.point_type = 1
     for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices):
         points[i].eps_neigbours = [points[idx] for idx in i_eps_neighbours_indices]
 
@@ -67,20 +65,36 @@ def get_eps_neighbour_indices(
 def assign_clusters_dbscan(
     core_points: List[Point], non_core_points: List[Point], neighbours_getter: Callable
 ) -> None:
+    for core_point in core_points:
+        core_point.point_type = 1
+
     current_cluster_id = 1
     for core_point in tqdm(core_points, desc="Assigning core points to clusters..."):
         if core_point.cluster_id == 0:
-            core_neighbours = [
-                p for p in neighbours_getter(core_point) if p.point_type == 1
+            core_point.cluster_id = current_cluster_id
+            queue = [
+                p
+                for p in neighbours_getter(core_point)
+                if (p.point_type == 1 and p.cluster_id == 0)
             ]
-            for p in core_neighbours:
-                if p.cluster_id != 0:
-                    core_point.cluster_id = p.cluster_id
-                    break
+            while len(queue) > 0:
+                new_points_to_expand = []
+                for point_to_expand in queue:
+                    point_to_expand.cluster_id = current_cluster_id
+                    new_points_to_expand.extend(
+                        [
+                            p
+                            for p in neighbours_getter(point_to_expand)
+                            if (
+                                p.point_type == 1
+                                and p.cluster_id == 0
+                                and p not in new_points_to_expand
+                            )
+                        ]
+                    )
+                queue = new_points_to_expand
 
-            if core_point.cluster_id == 0:
-                core_point.cluster_id = current_cluster_id
-                current_cluster_id += 1
+            current_cluster_id += 1
 
     # Assign cluster indices to non-core points
     for point in tqdm(non_core_points, desc="Assigning non-core points to clusters..."):

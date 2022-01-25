@@ -20,7 +20,8 @@ def dbscrn(
     if ti:
         start_time = time.perf_counter()
 
-        ref_point = Point(id=-1, vals=[0.0 for _ in points[0].vals])
+        min_point = [min(p.vals[i] for p in points) for i in range(len(points[0].vals))]
+        ref_point = Point(id=-1, vals=min_point)
         dist_fn = distance_fn_generator(m)
 
         point_idx_ref_dist = sorted(
@@ -49,8 +50,6 @@ def dbscrn(
     start_time = time.perf_counter()
     core_points = [p for p in points if len(p.r_k_plus_nn) >= k]
     non_core_points = [p for p in points if len(p.r_k_plus_nn) < k]
-    for core_point in core_points:
-        core_point.point_type = 1
 
     assign_clusters_dbscan(
         core_points=core_points,
