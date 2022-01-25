@@ -22,6 +22,7 @@ struct point {
 };
 extern std::vector<point> points;
 extern int clusters[100000];
+extern double reference_values[10000];
 extern bool visited[100000];
 
 #endif //CLUSTERING_POINT_H
