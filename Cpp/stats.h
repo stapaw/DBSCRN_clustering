@@ -23,7 +23,6 @@ struct stats {
     int noise_points;
     int border_points;
     int core_points;
-    int non_core_points;
 
     double  avg_dist_calculation;
     std::vector<double> time_diffs;

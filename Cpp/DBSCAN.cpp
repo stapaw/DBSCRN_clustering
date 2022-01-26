@@ -28,7 +28,7 @@ int DBSCAN(const int &minPts) {
             if (clusters[seeds.front()] == 0) {
                 clusters[seeds.front()] = cluster_number;
                 if (points.at(seeds.front()).eps_neighborhood.size() >= minPts) {
-                    points.at(i).type = core;
+                    points.at(seeds.front()).type = core;
                     for (int n: points.at(seeds.front()).eps_neighborhood) {
                         seeds.push(n);
                     }

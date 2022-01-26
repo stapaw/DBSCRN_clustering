@@ -24,7 +24,6 @@ double get_time_in_sec(clock_t from, clock_t to);
 clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats);
 
 int clusters[100000] = {0};
-bool visited[100000] = {false};
 double reference_values[10000];
 
 int main(int argc, char *argv[]) {
@@ -33,12 +32,12 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/example.tsv"),
+            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/complex9.tsv"),
              "input file path")
-            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
+            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/complex9.tsv"),
              "ground truth (cluster labels) file path")
             (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBCSRN)")
-            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
+            (K_PARAM_NAME, po::value<int>()->default_value(25), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
@@ -152,7 +151,6 @@ int main(int argc, char *argv[]) {
 
     stats.avg_dist_calculation = (double) avg_distance_calculation_number / point_number;
     stats.core_points = point_types[core];
-    stats.non_core_points = point_types[non_core];
     stats.border_points = point_types[border];
     stats.noise_points = point_types[noise];
 
