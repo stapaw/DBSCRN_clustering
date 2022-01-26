@@ -27,7 +27,7 @@ def dbscan(
         i
         for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices)
         if len(i_eps_neighbours_indices)
-        >= min_samples - 1  # in original algorithm, point belongs to it's own kNN
+        >= min_samples
     ]
     core_points = [p for i, p in enumerate(points) if i in core_point_indices]
     non_core_points = [p for i, p in enumerate(points) if i not in core_point_indices]

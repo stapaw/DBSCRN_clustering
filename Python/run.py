@@ -107,11 +107,17 @@ def run(
             "minkowski_power": m_power,
         }
     elif algorithm == "dbscrn":
-        alg_runtimes = dbscrn(points, k=k, m=m_power, ti=ti)
+        if ti:
+            ref_point = Point(id=-1, vals=[min(p.vals[i] for p in points) for i in range(len(points[0].vals))])
+        else:
+            ref_point = None
+        alg_runtimes = dbscrn(points, k=k, m=m_power, ti=ti, ref_point=ref_point)
         alg_dir = "dbscrn" if not ti else "dbscrn_ti"
         output_dir = output_dir / alg_dir / dataset_name / f"k_{k}_m_{m_power}"
         main_info["algorithm"] = "DBSCRN"
         parameters = {"TI_optimized": ti, "k": k, "minkowski_power": m_power}
+        if ref_point is not None:
+            parameters["TI_reference_point"] = ref_point.vals
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}.")
     runtimes.update(alg_runtimes)
