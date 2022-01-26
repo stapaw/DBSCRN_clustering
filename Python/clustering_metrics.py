@@ -1,9 +1,8 @@
 from collections import defaultdict
 from math import comb
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from tqdm import tqdm
-
 from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
@@ -12,7 +11,7 @@ def assert_gt_set(points: List[Point]) -> None:
 
 
 def assert_c_id_set(points: List[Point]) -> None:
-    assert all(p.cluster_id is not None for p in points)
+    assert all(p.cluster_id != 0 for p in points)
 
 
 def purity(points: List[Point]) -> float:
@@ -29,14 +28,13 @@ def purity(points: List[Point]) -> float:
         gt_clusters[p.ground_truth].add(p.id)
         discovered_clusters[p.cluster_id].add(p.id)
 
-    return (
-        1
-        / len(points)
-        * sum(
-            max(len(g.intersection(c)) for c in gt_clusters.values())
-            for g in discovered_clusters.values()
+    total_card = 0
+    for g_cid_set in gt_clusters.values():
+        total_card += max(
+            len(g_cid_set.intersection(c_cid_set))
+            for c_cid_set in discovered_clusters.values()
         )
-    )
+    return total_card / len(points)
 
 
 def rand(points: List[Point]) -> Tuple[float, int, int, int]:
@@ -63,118 +61,96 @@ def rand(points: List[Point]) -> Tuple[float, int, int, int]:
     return (tp + tn) / count, tp, tn, count
 
 
-def pointwise_silhouette_coefficients(points: List[Point], m: float) -> List[float]:
+def silhouette_coefficient(points: List[Point], m: float) -> float:
     assert_c_id_set(points)
 
-    cluster_id_to_cluster_points = defaultdict(set)
-
-    for i, point in enumerate(points):
-        cluster_id_to_cluster_points[point.cluster_id].add(i)
-
     pairwise_distances = get_pairwise_distances(points, m)
-    silhouette_coeeficients = [0.0 for _ in range(len(points))]
+
+    cluster_id_to_cluster_point_indices = defaultdict(list)
+    for idx, point in enumerate(points):
+        cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
+    # Treat noise points as separate clusters
+    noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
+    max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
+    for idx in noise_point_indices:
+        max_cluster_id += 1
+        points[idx].cluster_id = max_cluster_id
+        cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
+
+    silhouette_coefficients = [None for _ in range(len(points))]
     for i, point in tqdm(
         enumerate(points),
         desc="Calculating silhouette coefficients...",
         total=len(points),
     ):
-        current_cluster_id = point.cluster_id
-        same_cluster_ids = cluster_id_to_cluster_points[current_cluster_id]
-        distances = [
-            (m if m != i else n, pairwise_distances[(m, n) if m < n else (n, m)])
-            for m in range(len(points))
-            for n in range(m + 1, len(points))
-            if i in (m, n)
+        same_cluster_point_indices = cluster_id_to_cluster_point_indices[
+            point.cluster_id
         ]
-
-        if current_cluster_id == -1:
-            a = 0.0
+        same_cluster_point_distances = [
+            pairwise_distances[(i, j)]
+            if (i, j) in pairwise_distances.keys()
+            else pairwise_distances[(j, i)]
+            for j in same_cluster_point_indices
+            if j != i
+        ]
+        if len(same_cluster_point_distances) > 0:  # check for singleton clusters
+            a = sum(same_cluster_point_distances) / len(same_cluster_point_distances)
         else:
-            same_cluster_distances = [
-                distance for j, distance in distances if j in same_cluster_ids
-            ]
-            a = sum(same_cluster_distances) / len(same_cluster_distances)
+            a = 0
 
         b_candidates = []
-        for cluster_id, cluster_points_indices in cluster_id_to_cluster_points.items():
-            if cluster_id == -1:
-                b_candidates.extend(
-                    [
-                        distance
-                        for j, distance in distances
-                        if j in cluster_points_indices and j != i
-                    ]
-                )
-            else:
-                if cluster_id == current_cluster_id:
-                    continue
-                else:
-                    cluster_distances = [
-                        distance
-                        for j, distance in distances
-                        if j in cluster_points_indices
-                    ]
-                    b_candidates.append(sum(cluster_distances) / len(cluster_distances))
+        for c_id, c_indices in cluster_id_to_cluster_point_indices.items():
+            if c_id == point.cluster_id:
+                continue
+            other_cluster_point_indices = cluster_id_to_cluster_point_indices[c_id]
+            other_cluster_point_distances = [
+                pairwise_distances[(i, j)]
+                if (i, j) in pairwise_distances.keys()
+                else pairwise_distances[(j, i)]
+                for j in other_cluster_point_indices
+            ]
+            b = sum(other_cluster_point_distances) / len(other_cluster_point_distances)
+            b_candidates.append(b)
         b = min(b_candidates)
 
-        silhouette_coeeficients[i] = (b - a) / max(b, a)
-
-    return silhouette_coeeficients
-
-
-def cluster_wise_silhouette_coefficients(
-    points: List[Point], m: float
-) -> Dict[int, float]:
-    silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
-
-    cluster_id_to_cluster_points = defaultdict(set)
-    for i, point in enumerate(points):
-        cluster_id_to_cluster_points[point.cluster_id].add(i)
-
-    return {
-        cluster_id: sum(silhouette_coefficients[c] for c in coefficients)
-        / len(coefficients)
-        for cluster_id, coefficients in cluster_id_to_cluster_points.items()
-        if cluster_id != -1
-    }
-
-
-def mean_silhouette_coefficient(points: List[Point], m: float) -> float:
-    silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
+        silhouette_coefficients[i] = (b - a) / max(b, a)
 
     return sum(silhouette_coefficients) / len(silhouette_coefficients)
 
 
 def davies_bouldin(points: List[Point], m: float) -> float:
     assert_c_id_set(points)
-    assert all(p.cluster_id != -1 for p in points)
 
     dist_fn = distance_fn_generator(m)
 
-    cluster_id_to_cluster_points = defaultdict(set)
-    for i, point in enumerate(points):
-        cluster_id_to_cluster_points[point.cluster_id].add(i)
+    cluster_id_to_points = defaultdict(list)
+    for point in points:
+        cluster_id_to_points[point.cluster_id].append(point)
 
-    centroids = {}
-    sigmas = {}
-    for i, cluster_point_indices in cluster_id_to_cluster_points.items():
-        cluster_points = [points[j] for j in cluster_point_indices]
-        centroid_vals = [
-            sum(p.vals[dim] for p in cluster_points) / len(cluster_points)
-            for dim in range(len(points[0].vals))
+    cluster_centroids = []
+    sigmas = []
+
+    for cluster_id, cluster_points in cluster_id_to_points.items():
+        centroid = Point(
+            id=-1,
+            vals=[
+                sum(p.vals[dim] for p in cluster_points) / len(cluster_points)
+                for dim in range(len(points[0].vals))
+            ],
+            cluster_id=cluster_id,
+        )
+        cluster_centroids.append(centroid)
+        sigma = sum(dist_fn(centroid, p) for p in cluster_points) / len(cluster_points)
+        sigmas.append(sigma)
+
+    db_total = 0
+    for i in range(len(cluster_centroids)):
+        db_candidates = [
+            (sigmas[i] + sigmas[j])
+            / (dist_fn(cluster_centroids[i], cluster_centroids[j]))
+            for j in range(len(cluster_centroids))
+            if i != j
         ]
-        centroid = Point(id=-1, vals=centroid_vals)
-        centroids[i] = centroid
+        db_total += max(db_candidates)
 
-        centroid_distances = [dist_fn(p, centroid) for p in cluster_points]
-        sigma = sum(centroid_distances) / len(centroid_distances)
-        sigmas[i] = sigma
-
-    db_candidates = [
-        (sigmas[i] + sigmas[j]) / (dist_fn(centroids[i], centroids[j]))
-        for i in cluster_id_to_cluster_points.keys()
-        for j in cluster_id_to_cluster_points.keys()
-        if i != j
-    ]
-
-    return max(db_candidates) / len(cluster_id_to_cluster_points)
+    return db_total / len(cluster_centroids)

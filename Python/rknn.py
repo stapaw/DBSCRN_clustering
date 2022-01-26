@@ -1,5 +1,5 @@
 from heapq import nsmallest
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 from tqdm import tqdm
 from utils import Point, distance_fn_generator
@@ -39,12 +39,13 @@ def set_rknn(
             )[0]
         k_plus_nn_indices = [neighbour_idx for (neighbour_idx, _) in k_plus_nn]
 
-        points[i].k_plus_nn = [points[idx] for idx in k_plus_nn_indices] + [points[i]]
         for idx in k_plus_nn_indices:
             if points[idx].r_k_plus_nn is None:
                 points[idx].r_k_plus_nn = [points[i]]
             else:
                 points[idx].r_k_plus_nn.append(points[i])
+
+        points[i].k_plus_nn = [points[i]] + [points[idx] for idx in k_plus_nn_indices]
 
     for point in points:
         if point.r_k_plus_nn is None:
@@ -180,7 +181,7 @@ def set_rknn_ti(
             else:
                 neighbour.r_k_plus_nn.append(current_point)
 
-        current_point.k_plus_nn = k_plus_nn + [current_point]
+        current_point.k_plus_nn = [current_point] + k_plus_nn
 
     for point in points:
         if point.r_k_plus_nn is None:
