@@ -2,6 +2,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import List
 
 import click
 from clustering_metrics import davies_bouldin, mean_silhouette_coefficient, purity, rand
@@ -82,7 +83,7 @@ def run(
     silhouette: bool,
 ):
     start_time = time.perf_counter()
-    points: list[Point] = load_points(dataset_path)
+    points: List[Point] = load_points(dataset_path)
     runtimes = {"1_read_input_file": time.perf_counter() - start_time}
 
     dataset_name = Path(dataset_path).stem
@@ -149,8 +150,8 @@ def run(
         "Purity": purity(points),
         "davies_bouldin": davies_bouldin(points, m_power),
         "RAND": rand_value,
-        "TN": tp,
-        "TP": tn,
+        "TN": tn,
+        "TP": tp,
         "#_of_pairs": n_pairs,
     }
     if silhouette:

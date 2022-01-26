@@ -1,6 +1,6 @@
 import math
 import time
-from typing import Optional
+from typing import Optional, List, Dict
 
 from dbscan import assign_clusters_dbscan
 from rknn import set_rknn, set_rknn_ti
@@ -9,8 +9,8 @@ from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
 def dbscrn(
-    points: list[Point], k: int, m: float = 2, ti: bool = True, ref_point: Optional[Point] = None
-) -> dict[str, float]:
+    points: List[Point], k: int, m: float = 2, ti: bool = True, ref_point: Optional[Point] = None
+) -> Dict[str, float]:
     """
     :param points: Input examples.
     :param k: Number of the nearest neighbours. It is assumed that point is in it's k neighbours.

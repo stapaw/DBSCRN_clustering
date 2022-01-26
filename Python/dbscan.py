@@ -1,13 +1,13 @@
 import time
-from typing import Callable, List
+from typing import Callable, List, Tuple, Dict
 
 from tqdm import tqdm
 from utils import Point, get_pairwise_distances
 
 
 def dbscan(
-        points: list[Point], min_samples: int, eps: float, m: float = 2
-) -> dict[str, float]:
+        points: List[Point], min_samples: int, eps: float, m: float = 2
+) -> Dict[str, float]:
     start_time = time.perf_counter()
     pairwise_distances = get_pairwise_distances(points, m)
     point_distance_time = time.perf_counter() - start_time
@@ -52,8 +52,8 @@ def dbscan(
 
 
 def get_eps_neighbour_indices(
-        root_idx: int, pairwise_distances: dict[tuple[int, int], float]
-) -> list[int]:
+        root_idx: int, pairwise_distances: Dict[Tuple[int, int], float]
+) -> List[int]:
     matching_pairs = [
         indices
         for indices, distance in pairwise_distances.items()

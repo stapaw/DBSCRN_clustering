@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Tuple, Dict, List
 
 import seaborn as sns
 from tqdm import tqdm
@@ -10,15 +10,15 @@ sns.set_style("darkgrid")
 @dataclass
 class Point:
     id: Union[str, int]
-    vals: list[float]
+    vals: List[float]
     ground_truth: int = -1
     cluster_id: int = 0
     point_type: Optional[int] = None  # -1 for noise, 0 for non_core, 1 for core
-    k_plus_nn: Optional[list["Point"]] = None
-    r_k_plus_nn: Optional[list["Point"]] = None
+    k_plus_nn: Optional[List["Point"]] = None
+    r_k_plus_nn: Optional[List["Point"]] = None
     min_eps: Optional[float] = None
     max_eps: Optional[float] = None
-    eps_neigbours: Optional[list["Point"]] = None
+    eps_neigbours: Optional[List["Point"]] = None
     calc_ctr: int = 0
 
     def __str__(self) -> str:
@@ -72,7 +72,7 @@ class Point:
         return f"{values}\n"
 
 
-def load_points(dataset_path: str) -> list[Point]:
+def load_points(dataset_path: str) -> List[Point]:
     gt_path = dataset_path.replace("points", "ground_truth")
     with open(dataset_path, "r") as f:
         points_lines = f.readlines()[1:]
@@ -101,8 +101,8 @@ def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
 
 
 def get_pairwise_distances(
-    points: list[Point], m: float = 2, verbose: bool = True
-) -> dict[tuple[int, int], float]:
+    points: List[Point], m: float = 2, verbose: bool = True
+) -> Dict[Tuple[int, int], float]:
     dist_fn = distance_fn_generator(m)
 
     iterator = range(len(points))

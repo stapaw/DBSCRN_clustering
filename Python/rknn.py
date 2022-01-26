@@ -1,5 +1,5 @@
 from heapq import nsmallest
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from tqdm import tqdm
 from utils import Point, distance_fn_generator
@@ -7,7 +7,7 @@ from utils import Point, distance_fn_generator
 
 def set_rknn(
     points: List[Point],
-    pairwise_distances: dict[tuple[int, int], float],
+    pairwise_distances: Dict[Tuple[int, int], float],
     k: int,
     k_plus_nn_tolerance: float = 10e-9,
 ) -> None:
@@ -70,7 +70,7 @@ def set_rknn_ti(
         search_prev = (i - prev_idx_diff) >= 0
         search_next = (i + next_idx_diff) <= (len(points) - 1)
 
-        candidate_point_real_dist: list[tuple[int, float]] = []
+        candidate_point_real_dist: List[Tuple[int, float]] = []
         eps = 0.0
         stop_search = False
         k_corrected = k - 1  # account for point being it's own kNN
