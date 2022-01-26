@@ -6,7 +6,7 @@
 #define CLUSTERING_POINT_H
 
 enum point_type {
-    core, non_core, border, noise
+    core, border, noise
 };
 
 struct point {
@@ -23,6 +23,5 @@ struct point {
 extern std::vector<point> points;
 extern int clusters[100000];
 extern double reference_values[10000];
-extern bool visited[100000];
 
 #endif //CLUSTERING_POINT_H

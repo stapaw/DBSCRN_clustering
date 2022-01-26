@@ -17,9 +17,6 @@ const string SEPARATOR = ",";
 
 vector<string> split(const string &s, char by);
 
-Json::Value
-prepare_stats_file(const string *clock_phases, const double *time_diffs, int number_of_phases, stats stats);
-
 string get_filename_suffix(const boost::program_options::variables_map &vm, int point_number, int dimensions) {
     string filename_suffix = "_";
     filename_suffix += vm[TI_OPTIMIZED_PARAM_NAME].as<bool>() ? "Opt-" : "";
@@ -75,13 +72,7 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
 
     output[STATS_CLUSTERING_STATS]["#_clusters"] = stats.cluster_number;
     output[STATS_CLUSTERING_STATS]["#_core_points"] = stats.core_points;
-
-    if (output[STATS_MAIN][ALGORITHM_PARAM_NAME] == "DBSCAN") {
-        output[STATS_CLUSTERING_STATS]["#_border_points"] = stats.border_points;
-    } else {
-        output[STATS_CLUSTERING_STATS]["#non_core_points"] = stats.non_core_points;
-
-    }
+    output[STATS_CLUSTERING_STATS]["#_border_points"] = stats.border_points;
     output[STATS_CLUSTERING_STATS]["#_noise_points"] = stats.noise_points;
     output[STATS_CLUSTERING_STATS]["avg_#_of_distance_calculation"] = stats.avg_dist_calculation;
 

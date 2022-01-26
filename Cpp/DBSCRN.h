@@ -7,7 +7,7 @@
 
 #include <vector>
 
-int get_cluster_of_nearest_core_point(int point, const std::vector<int> &vector);
+int get_cluster_of_nearest_core_point(int point);
 
 void DBSCRN_expand_cluster(int i, int k, int cluster_number);
 
