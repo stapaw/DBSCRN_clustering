@@ -1,7 +1,7 @@
 from colorsys import hsv_to_rgb
 from math import floor, sqrt
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, Dict, List
 
 import click
 import seaborn as sns
@@ -55,8 +55,8 @@ def plot_out_2d(
 
 
 def _generate_sample_palette(
-    cluster_ids: list[int],
-) -> dict[int, tuple[float, float, float]]:
+    cluster_ids: List[int],
+) -> Dict[int, Tuple[float, float, float]]:
     unique_ids = set(cluster_ids)
     n = len(unique_ids)
 

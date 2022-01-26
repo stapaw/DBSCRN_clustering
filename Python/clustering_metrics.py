@@ -1,20 +1,21 @@
 from collections import defaultdict
 from math import comb
+from typing import List, Dict, Tuple
 
 from tqdm import tqdm
 
 from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
-def assert_gt_set(points: list[Point]) -> None:
+def assert_gt_set(points: List[Point]) -> None:
     assert all(p.ground_truth is not None for p in points)
 
 
-def assert_c_id_set(points: list[Point]) -> None:
+def assert_c_id_set(points: List[Point]) -> None:
     assert all(p.cluster_id is not None for p in points)
 
 
-def purity(points: list[Point]) -> float:
+def purity(points: List[Point]) -> float:
     """
     :param points: List of Points with cluster_id and ground_truth set.
     :return: Purity computed for the Points.
@@ -38,7 +39,7 @@ def purity(points: list[Point]) -> float:
     )
 
 
-def rand(points: list[Point]) -> tuple[float, int, int, int]:
+def rand(points: List[Point]) -> Tuple[float, int, int, int]:
     """
     :param points: List of Points with cluster_id and ground_truth set.
     :return: Tuple with rand value, |tp|, |tn| and pairs count.
@@ -62,7 +63,7 @@ def rand(points: list[Point]) -> tuple[float, int, int, int]:
     return (tp + tn) / count, tp, tn, count
 
 
-def pointwise_silhouette_coefficients(points: list[Point], m: float) -> list[float]:
+def pointwise_silhouette_coefficients(points: List[Point], m: float) -> List[float]:
     assert_c_id_set(points)
 
     cluster_id_to_cluster_points = defaultdict(set)
@@ -122,8 +123,8 @@ def pointwise_silhouette_coefficients(points: list[Point], m: float) -> list[flo
 
 
 def cluster_wise_silhouette_coefficients(
-    points: list[Point], m: float
-) -> dict[int, float]:
+    points: List[Point], m: float
+) -> Dict[int, float]:
     silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
 
     cluster_id_to_cluster_points = defaultdict(set)
@@ -138,13 +139,13 @@ def cluster_wise_silhouette_coefficients(
     }
 
 
-def mean_silhouette_coefficient(points: list[Point], m: float) -> float:
+def mean_silhouette_coefficient(points: List[Point], m: float) -> float:
     silhouette_coefficients = pointwise_silhouette_coefficients(points, m)
 
     return sum(silhouette_coefficients) / len(silhouette_coefficients)
 
 
-def davies_bouldin(points: list[Point], m: float) -> float:
+def davies_bouldin(points: List[Point], m: float) -> float:
     assert_c_id_set(points)
     assert all(p.cluster_id != -1 for p in points)
 
