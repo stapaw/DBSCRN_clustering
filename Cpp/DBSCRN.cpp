@@ -25,16 +25,24 @@ int DBSCRN(int k) {
         }
     }
     for (int non_core_point : S_non_core) {
-        points.at(non_core_point).type = non_core;
-        if (clusters[non_core_point] == 0) {
+//        points.at(non_core_point).type = non_core;
+//        if (clusters[non_core_point] == 0) {
             clusters[non_core_point] = get_cluster_of_nearest_core_point(non_core_point, S_core);
-        }
+//        }
     }
     return cluster_number - 1;
 }
 
-int get_cluster_of_nearest_core_point(int point, const std::vector<int> &vector) {
-//  currently implemented base method modification - those points are treated as outliers;
+int get_cluster_of_nearest_core_point(int point_id, const std::vector<int> &vector) {
+//  currently implemented base method modification - points not having core point in neighbours are treated as outliers;
+    for(int i=points.at(point_id).knn.size()-1; i>=0; i--){
+        if(points.at(points.at(point_id).knn.at(i)).type == core){
+            points.at(point_id).type = border;
+            return clusters[points.at(points.at(point_id).knn.at(i)).id];
+        }
+    }
+    // it is a noise/outlier point
+    points.at(point_id).type = noise;
     return 0;
 }
 
@@ -47,16 +55,16 @@ void DBSCRN_expand_cluster(int i, int k, int cluster_number) {
     for (int j = 0; j < S_tmp.size(); j++) {
         int y_k = S_tmp.at(j);
         for (int y_j: points.at(y_k).rnn) {
-            if (points.at(y_j).rnn.size() > (2 * k / M_PI)) {
+            if (points.at(y_j).rnn.size() >= k ) { // if is a core point
                 for (int p:points.at(y_j).rnn) {
                     if (!visited[p]) {
                         S_tmp.push_back(p);
                         visited[p] = true;
                     }
                 }
-            }
-            if (clusters[y_j] == 0) {
-                clusters[y_j] = cluster_number;
+                if (clusters[y_j] == 0) {
+                    clusters[y_j] = cluster_number;
+                }
             }
         }
     }
