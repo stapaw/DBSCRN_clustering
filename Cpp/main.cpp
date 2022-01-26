@@ -25,7 +25,7 @@ clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats);
 
 int clusters[100000] = {0};
 bool visited[100000] = {false};
-double reference_values[10000] = {big_number};
+double reference_values[10000];
 
 int main(int argc, char *argv[]) {
     clock_t start_time, last_checkpoint_time;
@@ -60,6 +60,8 @@ int main(int argc, char *argv[]) {
 
     int point_number, dimensions;
     InputFile >> point_number >> dimensions;
+
+    for (int j = 0; j < dimensions; j++) reference_values[j] = big_number;
 
     for (int i = 0; i < point_number; i++) {
         point p;
