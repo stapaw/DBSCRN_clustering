@@ -13,7 +13,6 @@ class Point:
     vals: list[float]
     ground_truth: int = -1
     cluster_id: int = 0
-    visited: bool = False
     point_type: Optional[int] = None  # -1 for noise, 0 for non_core, 1 for core
     k_plus_nn: Optional[list["Point"]] = None
     r_k_plus_nn: Optional[list["Point"]] = None

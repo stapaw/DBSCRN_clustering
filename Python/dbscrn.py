@@ -1,5 +1,6 @@
 import math
 import time
+from typing import Optional
 
 from dbscan import assign_clusters_dbscan
 from rknn import set_rknn, set_rknn_ti
@@ -8,22 +9,23 @@ from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
 def dbscrn(
-    points: list[Point], k: int, m: float = 2, ti: bool = True
+    points: list[Point], k: int, m: float = 2, ti: bool = True, ref_point: Optional[Point] = None
 ) -> dict[str, float]:
     """
     :param points: Input examples.
     :param k: Number of the nearest neighbours. It is assumed that point is in it's k neighbours.
     :param m: Power used in Minkowsky distance function.
     :param ti: If True, uses TI for optimized rk+NN computation.
+    :param ref_point: Reference point used for TI computations.
     """
 
     if ti:
+        if ref_point is None:
+            raise ValueError("Please provide reference point when reunning TI DBSCRN.")
+
         start_time = time.perf_counter()
 
-        min_point = [min(p.vals[i] for p in points) for i in range(len(points[0].vals))]
-        ref_point = Point(id=-1, vals=min_point)
         dist_fn = distance_fn_generator(m)
-
         point_idx_ref_dist = sorted(
             [
                 (i, dist_fn(ref_point, p))
