@@ -1,12 +1,12 @@
 import time
-from typing import Callable, List, Tuple, Dict
+from typing import Callable, Dict, List, Tuple
 
 from tqdm import tqdm
 from utils import Point, get_pairwise_distances
 
 
 def dbscan(
-        points: List[Point], min_samples: int, eps: float, m: float = 2
+    points: List[Point], min_samples: int, eps: float, m: float = 2
 ) -> Dict[str, float]:
     start_time = time.perf_counter()
     pairwise_distances = get_pairwise_distances(points, m)
@@ -16,7 +16,9 @@ def dbscan(
 
     # Determine core points
     start_time = time.perf_counter()
-    filtered_distances = {idx: dist for idx, dist in pairwise_distances.items() if dist < eps}
+    filtered_distances = {
+        idx: dist for idx, dist in pairwise_distances.items() if dist < eps
+    }
     eps_neighbours_indices = [
         get_eps_neighbour_indices(i, filtered_distances)
         for i in tqdm(range(len(points)), desc="Determining eps neighbourhoods...")
@@ -29,8 +31,7 @@ def dbscan(
     core_point_indices = [
         i
         for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices)
-        if len(i_eps_neighbours_indices)
-           >= min_samples
+        if len(i_eps_neighbours_indices) >= min_samples
     ]
     core_points = [p for i, p in enumerate(points) if i in core_point_indices]
     non_core_points = [p for i, p in enumerate(points) if i not in core_point_indices]
@@ -40,7 +41,8 @@ def dbscan(
     assign_clusters_dbscan(
         core_points=core_points,
         non_core_points=non_core_points,
-        neighbours_getter=lambda p: p.eps_neigbours,
+        neighbours_getter_cp=lambda p: p.eps_neigbours,
+        neighbours_getter_ncp=lambda p: p.eps_neigbours,
     )
     clustering_time = time.perf_counter() - start_time
 
@@ -52,7 +54,7 @@ def dbscan(
 
 
 def get_eps_neighbour_indices(
-        root_idx: int, pairwise_distances: Dict[Tuple[int, int], float]
+    root_idx: int, pairwise_distances: Dict[Tuple[int, int], float]
 ) -> List[int]:
     matching_pairs = [
         indices
@@ -66,7 +68,10 @@ def get_eps_neighbour_indices(
 
 
 def assign_clusters_dbscan(
-        core_points: List[Point], non_core_points: List[Point], neighbours_getter: Callable
+    core_points: List[Point],
+    non_core_points: List[Point],
+    neighbours_getter_cp: Callable,
+    neighbours_getter_ncp,
 ) -> None:
     for core_point in core_points:
         core_point.point_type = 1
@@ -77,7 +82,7 @@ def assign_clusters_dbscan(
             core_point.cluster_id = current_cluster_id
             queue = [
                 p
-                for p in neighbours_getter(core_point)
+                for p in neighbours_getter_cp(core_point)
                 if (p.point_type == 1 and p.cluster_id == 0)
             ]
             while len(queue) > 0:
@@ -87,7 +92,7 @@ def assign_clusters_dbscan(
                     new_points_to_expand.extend(
                         [
                             p
-                            for p in neighbours_getter(point_to_expand)
+                            for p in neighbours_getter_cp(point_to_expand)
                             if (
                                 p.point_type == 1
                                 and p.cluster_id == 0
@@ -100,12 +105,12 @@ def assign_clusters_dbscan(
             current_cluster_id += 1
 
     # Assign cluster indices to non-core points
-    # TODO assign by min dist - kNN should be sorted
     for point in tqdm(non_core_points, desc="Assigning non-core points to clusters..."):
-        for neighbour in neighbours_getter(point):
+        for neighbour in neighbours_getter_ncp(point):
             if neighbour.point_type == 1:
                 point.cluster_id = neighbour.cluster_id
                 point.point_type = 0
                 break
             if point.cluster_id == 0:
                 point.point_type = -1
+                point.cluster_id = -1

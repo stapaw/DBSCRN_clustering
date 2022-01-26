@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List
 
 import click
-from clustering_metrics import davies_bouldin, mean_silhouette_coefficient, purity, rand
+from clustering_metrics import davies_bouldin, purity, rand, silhouette_coefficient
 from dbscan import dbscan
 from dbscrn import dbscrn
 from plot import plot_out_2d
@@ -62,14 +62,6 @@ sys.path.extend(str(Path(__file__).parent))
     is_flag=True,
     help="If set, will plot results and save them in 'output_dir'.",
 )
-@click.option(
-    "--silhouette",
-    type=bool,
-    is_flag=True,
-    default=False,
-    help="If set, will compute silhouette coefficient for STAT file. "
-    "By default disabled, as this calculation takes very long time.",
-)
 def run(
     dataset_path: str,
     output_dir: Path,
@@ -80,7 +72,6 @@ def run(
     min_samples: int,
     eps: float,
     m_power: float,
-    silhouette: bool,
 ):
     start_time = time.perf_counter()
     points: List[Point] = load_points(dataset_path)
@@ -109,7 +100,12 @@ def run(
         }
     elif algorithm == "dbscrn":
         if ti:
-            ref_point = Point(id=-1, vals=[min(p.vals[i] for p in points) for i in range(len(points[0].vals))])
+            ref_point = Point(
+                id=-1,
+                vals=[
+                    min(p.vals[i] for p in points) for i in range(len(points[0].vals))
+                ],
+            )
         else:
             ref_point = None
         alg_runtimes = dbscrn(points, k=k, m=m_power, ti=ti, ref_point=ref_point)
@@ -153,11 +149,8 @@ def run(
         "TN": tn,
         "TP": tp,
         "#_of_pairs": n_pairs,
+        "silhouette_coefficient": silhouette_coefficient(points, m_power),
     }
-    if silhouette:
-        clustering_metrics["silhouette_coefficient"] = mean_silhouette_coefficient(
-            points, m_power
-        )
     runtimes["5_stats_calculation"] = (
         time.perf_counter() - metrics_computation_start_time
     )

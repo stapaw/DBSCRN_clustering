@@ -1,6 +1,6 @@
 import math
 import time
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
 from dbscan import assign_clusters_dbscan
 from rknn import set_rknn, set_rknn_ti
@@ -9,7 +9,11 @@ from utils import Point, distance_fn_generator, get_pairwise_distances
 
 
 def dbscrn(
-    points: List[Point], k: int, m: float = 2, ti: bool = True, ref_point: Optional[Point] = None
+    points: List[Point],
+    k: int,
+    m: float = 2,
+    ti: bool = True,
+    ref_point: Optional[Point] = None,
 ) -> Dict[str, float]:
     """
     :param points: Input examples.
@@ -56,7 +60,8 @@ def dbscrn(
     assign_clusters_dbscan(
         core_points=core_points,
         non_core_points=non_core_points,
-        neighbours_getter=lambda p: p.r_k_plus_nn,
+        neighbours_getter_cp=lambda p: p.r_k_plus_nn,
+        neighbours_getter_ncp=lambda p: p.k_plus_nn,
     )
     clustering_time = time.perf_counter() - start_time
 

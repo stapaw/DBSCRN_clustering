@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Union, Tuple, Dict, List
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import seaborn as sns
 from tqdm import tqdm
