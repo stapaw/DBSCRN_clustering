@@ -1,7 +1,8 @@
 from collections import defaultdict
-from math import comb
+
 from typing import Dict, List, Tuple
 
+from scipy.special import comb
 from tqdm import tqdm
 from utils import Point, distance_fn_generator, get_pairwise_distances
 
@@ -70,12 +71,13 @@ def silhouette_coefficient(points: List[Point], m: float) -> float:
     for idx, point in enumerate(points):
         cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
     # Treat noise points as separate clusters
-    noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
-    max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
-    for idx in noise_point_indices:
-        max_cluster_id += 1
-        points[idx].cluster_id = max_cluster_id
-        cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
+    if -1 in cluster_id_to_cluster_point_indices:
+        noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
+        max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
+        for idx in noise_point_indices:
+            max_cluster_id += 1
+            points[idx].cluster_id = max_cluster_id
+            cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
 
     silhouette_coefficients = [None for _ in range(len(points))]
     for i, point in tqdm(
