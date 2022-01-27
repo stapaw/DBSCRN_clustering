@@ -1,9 +1,10 @@
 from collections import defaultdict
-from math import comb
+
 from typing import Dict, List, Tuple
 
+from scipy.special import comb
 from tqdm import tqdm
-from utils import Point, distance_fn_generator, get_pairwise_distances
+from utils import Point, distance_fn_generator
 
 
 def assert_gt_set(points: List[Point]) -> None:
