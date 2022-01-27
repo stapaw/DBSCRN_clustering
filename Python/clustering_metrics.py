@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 
 from scipy.special import comb
 from tqdm import tqdm
-from utils import Point, distance_fn_generator, get_pairwise_distances
+from utils import Point, distance_fn_generator
 
 
 def assert_gt_set(points: List[Point]) -> None:
@@ -62,16 +62,16 @@ def rand(points: List[Point]) -> Tuple[float, int, int, int]:
     return (tp + tn) / count, tp, tn, count
 
 
-def silhouette_coefficient(points: List[Point], m: float) -> float:
+def silhouette_coefficient(
+    points: List[Point], pairwise_distances: Dict[Tuple[int, int], float]
+) -> float:
     assert_c_id_set(points)
-
-    pairwise_distances = get_pairwise_distances(points, m)
 
     cluster_id_to_cluster_point_indices = defaultdict(list)
     for idx, point in enumerate(points):
         cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
     # Treat noise points as separate clusters
-    if -1 in cluster_id_to_cluster_point_indices:
+    if -1 in cluster_id_to_cluster_point_indices.keys():
         noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
         max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
         for idx in noise_point_indices:

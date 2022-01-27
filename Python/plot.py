@@ -1,7 +1,7 @@
 from colorsys import hsv_to_rgb
 from math import floor, sqrt
 from pathlib import Path
-from typing import Optional, Union, Tuple, Dict, List
+from typing import Dict, List, Optional, Tuple, Union
 
 import click
 import seaborn as sns
