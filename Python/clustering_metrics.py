@@ -61,21 +61,22 @@ def rand(points: List[Point]) -> Tuple[float, int, int, int]:
     return (tp + tn) / count, tp, tn, count
 
 
-def silhouette_coefficient(points: List[Point], m: float) -> float:
+def silhouette_coefficient(
+    points: List[Point], pairwise_distances: Dict[Tuple[int, int], float]
+) -> float:
     assert_c_id_set(points)
-
-    pairwise_distances = get_pairwise_distances(points, m)
 
     cluster_id_to_cluster_point_indices = defaultdict(list)
     for idx, point in enumerate(points):
         cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
     # Treat noise points as separate clusters
-    noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
-    max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
-    for idx in noise_point_indices:
-        max_cluster_id += 1
-        points[idx].cluster_id = max_cluster_id
-        cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
+    if -1 in cluster_id_to_cluster_point_indices.keys():
+        noise_point_indices = cluster_id_to_cluster_point_indices.pop(-1)
+        max_cluster_id = max(cluster_id_to_cluster_point_indices.keys())
+        for idx in noise_point_indices:
+            max_cluster_id += 1
+            points[idx].cluster_id = max_cluster_id
+            cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
 
     silhouette_coefficients = [None for _ in range(len(points))]
     for i, point in tqdm(

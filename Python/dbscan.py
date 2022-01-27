@@ -2,17 +2,17 @@ import time
 from typing import Callable, Dict, List, Tuple
 
 from tqdm import tqdm
-from utils import Point, get_pairwise_distances
+from utils import Point
 
 
 def dbscan(
-    points: List[Point], min_samples: int, eps: float, m: float = 2
+    points: List[Point],
+    pairwise_distances: Dict[Tuple[int, int], float],
+    min_samples: int,
+    eps: float,
 ) -> Dict[str, float]:
-    start_time = time.perf_counter()
-    pairwise_distances = get_pairwise_distances(points, m)
-    point_distance_time = time.perf_counter() - start_time
-
-    min_samples -= 1  # Account for eps neighbourhood of point containing point
+    # Account for eps neighbourhood of point containing point
+    min_samples -= 1
 
     # Determine core points
     start_time = time.perf_counter()
@@ -47,7 +47,6 @@ def dbscan(
     clustering_time = time.perf_counter() - start_time
 
     return {
-        "2_sort_by_ref_point_distances": point_distance_time,
         "3_eps_neighborhood/rnn_calculation": eps_neighbourhood_assignment_time,
         "4_clustering": clustering_time,
     }
@@ -111,6 +110,6 @@ def assign_clusters_dbscan(
                 point.cluster_id = neighbour.cluster_id
                 point.point_type = 0
                 break
-            if point.cluster_id == 0:
-                point.point_type = -1
-                point.cluster_id = -1
+        if point.cluster_id == 0:
+            point.point_type = -1
+            point.cluster_id = -1
