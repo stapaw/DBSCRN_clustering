@@ -32,17 +32,19 @@ int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/complex9.tsv"),
+            (INPUT_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/points/example.tsv"),
              "input file path")
-            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/complex9.tsv"),
+            (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
             (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBCSRN)")
-            (K_PARAM_NAME, po::value<int>()->default_value(25), "number of nearest neighbors for DBSCRN")
+            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
             (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
-             "If true, TI optimized calculations are enabled (true|false)");
+             "If true, TI optimized calculations are enabled (true|false)")
+            (CALC_SILHOUETTE_PARAM_NAME, po::value<bool>()->default_value(true),
+             "If true, silhouette coefficient calculations are enabled (true|false)");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -137,8 +139,10 @@ int main(int argc, char *argv[]) {
 
 
     stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
-    stats.silhouette = calculate_silhouette(point_number);
     stats.davies_bouldin = calculate_davies_bouldin(stats);
+    if (vm[CALC_SILHOUETTE_PARAM_NAME].as<bool>())
+        stats.silhouette = calculate_silhouette(point_number, stats);
+
 
     double avg_distance_calculation_number = 0;
     int point_types[4] = {0};
@@ -163,7 +167,7 @@ int main(int argc, char *argv[]) {
 clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats) {
     double time_from_last_checkpoint = get_time_in_sec(from, to);
     stats.time_diffs.push_back(time_from_last_checkpoint);
-    int index = stats.time_diffs.size()-1;
+    int index = stats.time_diffs.size() - 1;
     cout << clock_phases[index] << " runtime: " << stats.time_diffs.at(index) << endl;
     return to;
 }

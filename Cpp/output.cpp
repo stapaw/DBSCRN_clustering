@@ -80,8 +80,8 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
     int number_of_phases = stats.time_diffs.size();
     for (int i = 0; i < number_of_phases; i++)
         output[STATS_CLUSTERING_TIME][clock_phases[i]] = stats.time_diffs.at(i);
-
-    output[STATS_CLUSTERING_METRICS]["silhouette_coefficient"] = stats.silhouette;
+    if (vm[CALC_SILHOUETTE_PARAM_NAME].as<bool>())
+        output[STATS_CLUSTERING_METRICS]["silhouette_coefficient"] = stats.silhouette;
     output[STATS_CLUSTERING_METRICS]["davies_bouldin"] = stats.davies_bouldin;
     // if real cluster known
     output[STATS_CLUSTERING_METRICS]["TP"] = stats.TP;
