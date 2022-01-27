@@ -2,3 +2,4 @@ seaborn
 sklearn
 tqdm
 pytest
+click
