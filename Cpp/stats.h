@@ -30,7 +30,7 @@ struct stats {
 
 double calculate_davies_bouldin(stats stats);
 
-double calculate_silhouette(int i);
+double calculate_silhouette(int i, const stats& stats);
 
 stats calculate_ground_truth_stats(stats stats, int point_number, const std::vector<int> &vector);
 #endif //CLUSTERING_STATS_H

@@ -27,4 +27,5 @@ static const char *const INPUT_FILE_PARAM_NAME = "input_file";
 static const char *const MINKOWSKI_PARAM_NAME = "minkowski_power";
 static const char *const TI_OPTIMIZED_PARAM_NAME = "TI_optimized";
 static const char *const LABELS_FILE_PARAM_NAME = "ground_truth_file";
+static const char *const CALC_SILHOUETTE_PARAM_NAME = "silhouette";
 #endif //CLUSTERING_SETTINGS_H

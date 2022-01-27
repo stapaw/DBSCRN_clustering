@@ -41,49 +41,64 @@ double calculate_davies_bouldin(stats stats) {
             imap.second.dimensions[j] /= cluster_cardinalities[imap.first];
         }
     }
-
+    cluster_distances[0] = 0;
     for (int i = 0; i < stats.point_number; i++) {
         point p = points.at(i);
         cluster_distances[clusters[i]] += calculate_distance(p, cluster_centroids[clusters[i]]);
     }
 
     for (auto &imap: cluster_distances) {
-        imap.second /= cluster_cardinalities[clusters[imap.first]];
+        imap.second /= cluster_cardinalities[imap.first];
     }
     double DS = 0;
     for (int i = 0; i <= stats.cluster_number; i++) {
-        double R_i = 0;
-        for (int j = 0; j <= stats.cluster_number; j++) {
-            if(i != j){
-                double s_i = cluster_distances[i];
-                double s_j = cluster_distances[j];
-                double dist = calculate_distance(cluster_centroids[i], cluster_centroids[j]);
-                double R_ij = (s_i + s_j)/dist;
-                R_i = max(R_i, R_ij);
+        if(cluster_cardinalities[i] != 0) {
+            double R_i = 0;
+            for (int j = 0; j <= stats.cluster_number; j++) {
+                if (cluster_cardinalities[j] != 0) {
+                    if (i != j) {
+                        double s_i = cluster_distances[i];
+                        double s_j = cluster_distances[j];
+                        double dist = calculate_distance(cluster_centroids[i], cluster_centroids[j]);
+                        double R_ij = (s_i + s_j) / dist;
+                        R_i = max(R_i, R_ij);
+                    }
+                }
             }
+            DS += R_i;
         }
-        DS += R_i;
     }
-//TODO: zero cluster as outlier? - fix wrong division numbers
-    return DS/stats.cluster_number;
+    int cluster_number = cluster_cardinalities[0] > 0 ? stats.cluster_number +1:stats.cluster_number;
+    return DS/cluster_number;
 }
 
-double calculate_silhouette(int point_number) {
-    map<int, double> cluster_distances;
-    map<int, double> cluster_cardinalities;
-    double global_s_i = 0;
+double calculate_silhouette(int point_number, const stats& stats) {
 
+    double global_s_i = 0;
     for (int i = 0; i < point_number; i++) {
-        for (int j = 0; j < point_number; j++)
-            if (i != j) {
-                cluster_distances[clusters[j]] += calculate_distance(points.at(i), points.at(j));
-                cluster_cardinalities[clusters[j]] += 1;
+        int outlier_cluster_counter = stats.cluster_number;
+        map<int, double> cluster_distances;
+        map<int, double> cluster_cardinalities;
+        for (int j = 0; j < point_number; j++){
+//            outliers as separate single point clusters:
+            if(clusters[j] == 0){
+                outlier_cluster_counter++;
+                cluster_distances[outlier_cluster_counter] = calculate_distance(points.at(i), points.at(j));
+                cluster_cardinalities[outlier_cluster_counter] += 1;
             }
-        double a_i = cluster_distances[clusters[i]] / cluster_cardinalities[clusters[i]];
+            else{
+                if (i != j) {
+                    cluster_distances[clusters[j]] += calculate_distance(points.at(i), points.at(j));
+                    cluster_cardinalities[clusters[j]] += 1;
+                }
+            }
+        }
+
+        double a_i = clusters[i] == 0 ? 0:cluster_distances[clusters[i]] / cluster_cardinalities[clusters[i]];
         double b_i = big_number;
         for (auto const &imap: cluster_distances) {
             if (imap.first != clusters[i]) {
-                b_i = min(b_i, imap.second / cluster_cardinalities[imap.first]);
+                b_i = min(b_i, clusters[i] == 0 ? 1:imap.second / cluster_cardinalities[imap.first]);
             }
         }
 
