@@ -115,7 +115,10 @@ def silhouette_coefficient(
             b_candidates.append(b)
         b = min(b_candidates)
 
-        silhouette_coefficients[i] = (b - a) / max(b, a)
+        if max(b, a) != 0:
+            silhouette_coefficients[i] = (b - a) / max(b, a)
+        else:
+            silhouette_coefficients[i] = 0
 
     return sum(silhouette_coefficients) / len(silhouette_coefficients)
 

@@ -110,6 +110,8 @@ def run(
         runtimes["2_sort_by_ref_point_distances"] = point_distance_time
 
     if algorithm == "dbscan":
+        print(f"Running DBSCAN on {dataset_name}, eps={eps}, minPts={min_samples}")
+
         alg_runtimes = dbscan(
             points,
             pairwise_distances=pairwise_distances,
@@ -130,6 +132,7 @@ def run(
         }
     elif algorithm == "dbscrn":
         if ti:
+            print(f"Running DBSCRN_TI on {dataset_name}, k={k}")
             (
                 point_distance_time,
                 ref_point,
@@ -143,6 +146,7 @@ def run(
                 points, k=k, m=m_power, point_idx_ref_dist=point_idx_ref_dist
             )
         else:
+            print(f"Running DBSCRN on {dataset_name}, k={k}")
             alg_runtimes = dbscrn(
                 points, k=k, m=m_power, ti=False, pairwise_distances=pairwise_distances
             )
