@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
              "input file path")
             (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
-            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBCSRN)")
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBSCRN)")
             (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")

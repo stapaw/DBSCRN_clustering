@@ -1,0 +1,47 @@
+{
+	"#main" : 
+	{
+		"#_dimensions" : 2,
+		"#_points" : 10000,
+		"algorithm" : "DBSCRN",
+		"input_file" : "../datasets/points/cluto-t7-10k.tsv"
+	},
+	"#parameters" : 
+	{
+		"TI_optimized" : true,
+		"k" : 35,
+		"minkowski_power" : 2,
+		"reference_point_values" : 
+		[
+			0.79700000000000004,
+			23.056000000000001
+		]
+	},
+	"clustering_metrics" : 
+	{
+		"#_of_pairs" : 49995000,
+		"Purity" : 0.94140000000000001,
+		"RAND" : 0.97180626062606257,
+		"TN" : 40693903,
+		"TP" : 7891551,
+		"davies_bouldin" : 2.0136619270368628,
+		"silhouette_coefficient" : -0.30456834941672445
+	},
+	"clustering_stats" : 
+	{
+		"#_border_points" : 4606,
+		"#_clusters" : 9,
+		"#_core_points" : 5306,
+		"#_noise_points" : 88,
+		"avg_#_of_distance_calculation" : 484.05160000000001
+	},
+	"clustering_time" : 
+	{
+		"1_read_input_file" : 0.019993,
+		"2_sort_by_ref_point_distances" : 0.0086169999999999997,
+		"3_eps_neighborhood/rnn_calculation" : 6.7822750000000003,
+		"4_clustering" : 0.018085,
+		"5_stats_calculation" : 42.667893999999997,
+		"total_runtime" : 49.496864000000002
+	}
+}
