@@ -17,7 +17,7 @@ def dbscan(
     # Determine core points
     start_time = time.perf_counter()
     filtered_distances = {
-        idx: dist for idx, dist in pairwise_distances.items() if dist < eps
+        idx: dist for idx, dist in pairwise_distances.items() if dist <= eps
     }
     eps_neighbours_indices = [
         get_eps_neighbour_indices(i, filtered_distances)
