@@ -208,7 +208,7 @@ def run(
             "parameters": parameters,
             "clustering_metrics": clustering_metrics,
             "clustering_stats": clustering_stats,
-            "clustering_time": runtimes,
+            "clustering_time[s]": runtimes,
         }
         json.dump(stat_dict, f, indent=2)
 

@@ -95,7 +95,6 @@ def load_points(dataset_path: str) -> List[Point]:
 def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
     def distance(p1: Point, p2: Point) -> float:
         p1.calc_ctr += 1
-        p2.calc_ctr += 1
         return sum(abs(p1.vals[i] - p2.vals[i]) ** m for i in range(len(p1.vals))) ** (
             1 / m
         )

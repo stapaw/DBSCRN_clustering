@@ -71,7 +71,7 @@ def compute_point_idx_ref_distance_list(
         dist_fn = distance_fn_generator(m_power)
         point_idx_ref_dist = sorted(
             [
-                (i, dist_fn(ref_point, p))
+                (i, dist_fn(p, ref_point))
                 for i, p in tqdm(
                     enumerate(points), desc="Calculating reference distances..."
                 )
