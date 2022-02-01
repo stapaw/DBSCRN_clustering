@@ -6,7 +6,7 @@
 #define CLUSTERING_POINT_H
 
 enum point_type {
-    core, border, noise
+    noise, border, core
 };
 
 struct point {
