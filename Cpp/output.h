@@ -9,7 +9,7 @@ static const char *const STATS_MAIN = "#main";
 static const char *const STATS_PARAMETERS = "#parameters";
 static const char *const STATS_CLUSTERING_STATS = "clustering_stats";
 static const char *const STATS_CLUSTERING_METRICS = "clustering_metrics";
-static const char *const STATS_CLUSTERING_TIME = "clustering_time";
+static const char *const STATS_CLUSTERING_TIME = "clustering_time (in seconds)";
 
 
 #include <boost/program_options/variables_map.hpp>
@@ -23,7 +23,7 @@ string get_filename_suffix(const boost::program_options::variables_map &vm, int 
 
 void write_to_stats_file(stats stats, const boost::program_options::variables_map& vm, const string &filename);
 
-void write_to_debug_file(int point_number, const string& filename);
+void write_to_debug_file(int point_number, const string& filename, const boost::program_options::variables_map &vm);
 
 void write_to_out_file(int point_number, const string& filename);
 

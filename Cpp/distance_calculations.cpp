@@ -57,7 +57,9 @@ void calculate_eps_neighborhood(double eps) {
         std::vector<distance_x> distances = calculate_distances_for_knn(points.at(i), points.size());
 
         sort(distances.begin(), distances.end(), dist_comparator());
-        points.at(i).distanceCalculationNumber += size;
+        points.at(i).distanceCalculationNumber += size-1;
+        points.at(i).min_eps = eps;
+        points.at(i).max_eps = eps;
         int j = 0;
         while ((j < size) && (distances.at(j).dist <= eps)) {
             points.at(i).eps_neighborhood.push_back(distances.at(j).id);

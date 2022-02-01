@@ -92,30 +92,42 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
 
     StatsFile << output;
     StatsFile.close();
-
-    cout << output;
 }
 
-void write_to_debug_file(int point_number, const string &filename) {
+void write_to_debug_file(int point_number, const string &filename, const boost::program_options::variables_map &vm) {
     std::ofstream DebugFile(filename);
-
-    DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
-    DebugFile << "[knn]" << SEPARATOR << "[rnn]" << std::endl;
-
-    for (int i = 0; i < point_number; i++) {
-        DebugFile << i << SEPARATOR
-                  << points.at(i).max_eps << SEPARATOR
-                  << points.at(i).min_eps << SEPARATOR
-                  << points.at(i).rnn.size() << SEPARATOR;
-        DebugFile << "[ ";
-        for (int j: points.at(i).knn) {
-            DebugFile << j << " ";
+    if(vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
+        DebugFile << "id" << SEPARATOR << "|eps_neighbourhood|" << SEPARATOR << "eps_neighbourhood" << std::endl;
+        for (int i = 0; i < point_number; i++) {
+            DebugFile << i << SEPARATOR
+                      << points.at(i).eps_neighborhood.size() << SEPARATOR;
+            DebugFile << "[ ";
+            for (int j: points.at(i).eps_neighborhood) {
+                DebugFile << j << " ";
+            }
+            DebugFile << "]" << std::endl;
         }
-        DebugFile << "]" << SEPARATOR << "[ ";
-        for (int j: points.at(i).rnn) {
-            DebugFile << j << " ";;
+    }
+    else {
+        DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
+        DebugFile << "[knn]" << SEPARATOR << "[rnn]" << std::endl;
+
+
+        for (int i = 0; i < point_number; i++) {
+            DebugFile << i << SEPARATOR
+                      << points.at(i).max_eps << SEPARATOR
+                      << points.at(i).min_eps << SEPARATOR
+                      << points.at(i).rnn.size() << SEPARATOR;
+            DebugFile << "[ ";
+            for (int j: points.at(i).knn) {
+                DebugFile << j << " ";
+            }
+            DebugFile << "]" << SEPARATOR << "[ ";
+            for (int j: points.at(i).rnn) {
+                DebugFile << j << " ";
+            }
+            DebugFile << "]" << std::endl;
         }
-        DebugFile << "]" << std::endl;
     }
     DebugFile.close();
 }
@@ -126,7 +138,7 @@ void write_to_out_file(int point_number, const string &filename) {
 //    header
     OutFile << "id" << SEPARATOR;
     for (int j = 0; j < dimensions; j++) OutFile << "d" << j << SEPARATOR;
-    OutFile << "distance_calculations" << SEPARATOR << "is_core" << SEPARATOR << "cluster_id" << std::endl;
+    OutFile << "distance_calculations" << SEPARATOR << "point_type" << SEPARATOR << "cluster_id" << std::endl;
 
     for (int i = 0; i < point_number; i++) {
         OutFile << i << SEPARATOR;
@@ -134,7 +146,7 @@ void write_to_out_file(int point_number, const string &filename) {
             OutFile << points.at(i).dimensions.at(j) << SEPARATOR;
         }
         OutFile << points.at(i).distanceCalculationNumber << SEPARATOR
-                << (points.at(i).type == core) << SEPARATOR
+                << points.at(i).type -1<< SEPARATOR
                 << clusters[i] << std::endl;
     }
     OutFile.close();

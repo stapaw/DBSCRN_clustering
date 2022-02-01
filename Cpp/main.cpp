@@ -36,12 +36,12 @@ int main(int argc, char *argv[]) {
              "input file path")
             (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
-            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCRN"), "algorithm name (DBSCAN|DBSCRN)")
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBSCRN)")
             (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
-            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
+            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(false),
              "If true, TI optimized calculations are enabled (true|false)")
             (CALC_SILHOUETTE_PARAM_NAME, po::value<bool>()->default_value(true),
              "If true, silhouette coefficient calculations are enabled (true|false)");
@@ -82,6 +82,8 @@ int main(int argc, char *argv[]) {
     settings.minPts = vm[MIN_PTS_PARAM_NAME].as<int>();
     settings.k = vm[K_PARAM_NAME].as<int>();
 
+    cout<< "Runtime (in seconds):" << endl;
+
     last_checkpoint_time = save_checkpoint_time(start_time, clock(), stats);
 
     int cluster_number;
@@ -96,6 +98,7 @@ int main(int argc, char *argv[]) {
 
             calculate_eps_neighborhood_optimized(vm[EPS_PARAM_NAME].as<double>(), distances);
         } else {
+            last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, last_checkpoint_time, stats);
             calculate_eps_neighborhood(vm[EPS_PARAM_NAME].as<double>());
         }
         last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
@@ -124,8 +127,23 @@ int main(int argc, char *argv[]) {
     last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
     string filename_suffix = get_filename_suffix(vm, point_number, dimensions);
+    write_to_debug_file(point_number, "DEBUG" + filename_suffix, vm);
+
+    double avg_distance_calculation_number = 0;
+    int point_types[3] = {0};
+    for (int i = 0; i < point_number; i++) {
+        point p = points.at(i);
+        avg_distance_calculation_number += p.distanceCalculationNumber;
+        if (p.type == noise && clusters[i] != 0 && clusters[i] != -1) points.at(i).type = border;
+        point_types[points.at(i).type]++;
+    }
+
+    stats.avg_dist_calculation = (double) avg_distance_calculation_number / point_number;
+    stats.core_points = point_types[core];
+    stats.border_points = point_types[border];
+    stats.noise_points = point_types[noise];
+
     write_to_out_file(point_number, "OUT" + filename_suffix);
-    write_to_debug_file(point_number, "DEBUG" + filename_suffix);
 
 
     vector<int> ground_truth;
@@ -144,23 +162,12 @@ int main(int argc, char *argv[]) {
         stats.silhouette = calculate_silhouette(point_number, stats);
 
 
-    double avg_distance_calculation_number = 0;
-    int point_types[4] = {0};
-    for (int i = 0; i < point_number; i++) {
-        point p = points.at(i);
-        avg_distance_calculation_number += p.distanceCalculationNumber;
-        if (p.type == noise && clusters[i] != 0 && clusters[i] != -1) p.type = border;
-        point_types[p.type]++;
-    }
 
-    stats.avg_dist_calculation = (double) avg_distance_calculation_number / point_number;
-    stats.core_points = point_types[core];
-    stats.border_points = point_types[border];
-    stats.noise_points = point_types[noise];
 
     last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
     stats.time_diffs.push_back(get_time_in_sec(start_time, last_checkpoint_time)); // total
-
+    int index = stats.time_diffs.size() - 1;
+    cout << clock_phases[index]  << " " << stats.time_diffs.at(index);
     write_to_stats_file(stats, vm, "STAT" + filename_suffix);
 }
 
