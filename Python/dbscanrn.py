@@ -1,22 +1,85 @@
+import time
 from heapq import nsmallest
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from dbscan import assign_clusters_dbscan
 from tqdm import tqdm
 from utils import Point, distance_fn_generator
 
 
+def dbscanrn(
+    points: List[Point],
+    k: int,
+    m: float = 2,
+    ti: bool = True,
+    ref_point: Optional[Point] = None,
+) -> Dict[str, float]:
+    """
+    :param points: Input examples.
+    :param k: Number of the nearest neighbours. It is assumed that point is in it's k neighbours.
+    :param m: Power used in Minkowsky distance function.
+    :param ti: If True, uses TI for optimized rk+NN computation.
+    :param ref_point: Reference point used by TI optimized version.
+    """
+
+    if ti:
+        point_distance_time, rknn_time = set_rknn_ti(
+            points=points, ref_point=ref_point, m=m, k=k
+        )
+    else:
+        point_distance_time, rknn_time = set_rknn(points=points, m=m, k=k)
+
+    start_time = time.perf_counter()
+    core_points = [p for p in points if len(p.r_k_plus_nn) >= k]
+    non_core_points = [p for p in points if len(p.r_k_plus_nn) < k]
+
+    assign_clusters_dbscan(
+        core_points=core_points,
+        non_core_points=non_core_points,
+        neighbours_getter_cp=lambda p: p.r_k_plus_nn,
+        neighbours_getter_ncp=lambda p: p.k_plus_nn,
+    )
+    clustering_time = time.perf_counter() - start_time
+
+    return {
+        "2_sort_by_ref_point_distances": point_distance_time,
+        "3_eps_neighborhood/rnn_calculation": rknn_time,
+        "4_clustering": clustering_time,
+    }
+
+
+def compute_point_idx_ref_distance_list(
+    points: List[Point], ref_point: Point, m_power: float
+) -> Tuple[float, List[Tuple[int, float]]]:
+    start_time = time.perf_counter()
+
+    dist_fn = distance_fn_generator(m_power)
+    point_idx_ref_dist = sorted(
+        [
+            (i, dist_fn(p, ref_point))
+            for i, p in tqdm(
+                enumerate(points), desc="Calculating reference distances..."
+            )
+        ],
+        key=lambda pair: pair[1],
+    )
+    point_distance_time = time.perf_counter() - start_time
+
+    return point_distance_time, point_idx_ref_dist
+
+
 def set_rknn(
     points: List[Point],
-    pairwise_distances: Dict[Tuple[int, int], float],
     k: int,
+    m: float,
     k_plus_nn_tolerance: float = 10e-9,
-) -> None:
+) -> Tuple[float, float]:
+    start_time = time.perf_counter()
+
+    dist_fn = distance_fn_generator(m)
     for i in tqdm(range(len(points)), desc="Calculating rK+NN..."):
         point_idx_to_dist = [
-            (m if m != i else n, pairwise_distances[(m, n) if m < n else (n, m)])
-            for m in range(len(points))
-            for n in range(m + 1, len(points))
-            if i in (m, n)
+            (j, dist_fn(points[i], points[j])) for j in range(len(points)) if j != i
         ]
 
         k_plus_nn = nsmallest(
@@ -50,15 +113,23 @@ def set_rknn(
     for point in points:
         if point.r_k_plus_nn is None:
             point.r_k_plus_nn = []
+    rknn_time = time.perf_counter() - start_time
+    return 0, rknn_time
 
 
 def set_rknn_ti(
     points: List[Point],
-    point_idx_ref_dist: List[Tuple[int, float]],
+    ref_point: Point,
     k: int,
     m: float = 2.0,
     k_plus_nn_tolerance: float = 10e-9,
-) -> None:
+) -> Tuple[float, float]:
+    (
+        point_distance_time,
+        point_idx_ref_dist,
+    ) = compute_point_idx_ref_distance_list(points, ref_point, m)
+
+    start_time = time.perf_counter()
     for i in tqdm(range(len(points)), desc="Calculating rK+NN using TI..."):
         current_point_idx, current_point_ref_dist = point_idx_ref_dist[i]
         current_point = points[current_point_idx]
@@ -186,3 +257,6 @@ def set_rknn_ti(
     for point in points:
         if point.r_k_plus_nn is None:
             point.r_k_plus_nn = []
+    rknn_time = time.perf_counter() - start_time
+
+    return point_distance_time, rknn_time
