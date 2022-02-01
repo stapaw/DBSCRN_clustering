@@ -41,7 +41,7 @@ void calculate_knn(int k) {
         std::vector<distance_x> distances = calculate_distances_for_knn(points.at(i), size);
         sort(distances.begin(), distances.end(), dist_comparator());
 
-        points.at(i).distanceCalculationNumber += size;
+        points.at(i).distanceCalculationNumber += size-1;
         for (int j = 0; j < k; j++) {
                 points.at(i).knn.push_back(distances.at(j).id);
             if (points.at(i).id != distances.at(j).id) {

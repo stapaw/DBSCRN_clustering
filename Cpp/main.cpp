@@ -36,12 +36,12 @@ int main(int argc, char *argv[]) {
              "input file path")
             (LABELS_FILE_PARAM_NAME, po::value<string>()->default_value("../datasets/ground_truth/example.tsv"),
              "ground truth (cluster labels) file path")
-            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCAN"), "algorithm name (DBSCAN|DBSCRN)")
-            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCRN")
+            (ALGORITHM_PARAM_NAME, po::value<string>()->default_value("DBSCANRN"), "algorithm name (DBSCAN|DBSCANRN)")
+            (K_PARAM_NAME, po::value<int>()->default_value(3), "number of nearest neighbors for DBSCANRN")
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
-            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(false),
+            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
              "If true, TI optimized calculations are enabled (true|false)")
             (CALC_SILHOUETTE_PARAM_NAME, po::value<bool>()->default_value(true),
              "If true, silhouette coefficient calculations are enabled (true|false)");
