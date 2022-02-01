@@ -7,13 +7,10 @@ from utils import Point, distance_fn_generator
 
 def dbscan(
     points: List[Point],
-    min_samples: int,
+    min_pts: int,
     eps: float,
     m: float,
 ) -> Dict[str, float]:
-    # Account for eps neighbourhood of point containing point
-    min_samples -= 1
-
     # Determine core points
     start_time = time.perf_counter()
     dist_fn = distance_fn_generator(m)
@@ -29,18 +26,18 @@ def dbscan(
     core_point_indices = [
         i
         for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices)
-        if len(i_eps_neighbours_indices) >= min_samples
+        if len(i_eps_neighbours_indices) >= min_pts
     ]
     core_points = [p for i, p in enumerate(points) if i in core_point_indices]
     non_core_points = [p for i, p in enumerate(points) if i not in core_point_indices]
     for i, i_eps_neighbours_indices in enumerate(eps_neighbours_indices):
-        points[i].eps_neigbours = [points[idx] for idx in i_eps_neighbours_indices]
+        points[i].eps_neighbours = [points[idx] for idx in i_eps_neighbours_indices]
 
     assign_clusters_dbscan(
         core_points=core_points,
         non_core_points=non_core_points,
-        neighbours_getter_cp=lambda p: p.eps_neigbours,
-        neighbours_getter_ncp=lambda p: p.eps_neigbours,
+        neighbours_getter_cp=lambda p: p.eps_neighbours,
+        neighbours_getter_ncp=lambda p: p.eps_neighbours,
     )
     clustering_time = time.perf_counter() - start_time
 
@@ -57,7 +54,7 @@ def get_eps_neighbour_indices(
     eps: float,
     dist_fn: Callable[[Point, Point], float],
 ) -> List[int]:
-    return [
+    return [root_idx] + [
         idx
         for idx in range(len(points))
         if (idx != root_idx and dist_fn(points[root_idx], points[idx]) <= eps)

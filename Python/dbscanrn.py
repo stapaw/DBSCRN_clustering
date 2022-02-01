@@ -7,7 +7,7 @@ from tqdm import tqdm
 from utils import Point, distance_fn_generator
 
 
-def dbscrn(
+def dbscanrn(
     points: List[Point],
     k: int,
     m: float = 2,
@@ -19,6 +19,7 @@ def dbscrn(
     :param k: Number of the nearest neighbours. It is assumed that point is in it's k neighbours.
     :param m: Power used in Minkowsky distance function.
     :param ti: If True, uses TI for optimized rk+NN computation.
+    :param ref_point: Reference point used by TI optimized version.
     """
 
     if ti:

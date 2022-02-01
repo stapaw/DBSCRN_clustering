@@ -17,7 +17,7 @@ class Point:
     r_k_plus_nn: Optional[List["Point"]] = None
     min_eps: Optional[float] = None
     max_eps: Optional[float] = None
-    eps_neigbours: Optional[List["Point"]] = None
+    eps_neighbours: Optional[List["Point"]] = None
     calc_ctr: int = 0
 
     def __str__(self) -> str:
@@ -51,9 +51,9 @@ class Point:
             debug_info.append(str(k_plus_nn_ids))
             debug_info.append(str(r_k_plus_nn_ids))
 
-        if self.eps_neigbours is not None:
-            eps_neighbours_ids = sorted(p.id for p in self.eps_neigbours)
-            debug_info.extend([str(eps_neighbours_ids), str(len(eps_neighbours_ids))])
+        if self.eps_neighbours is not None:
+            eps_neighbours_ids = sorted([p.id for p in self.eps_neighbours])
+            debug_info.extend([str(len(eps_neighbours_ids)), str(eps_neighbours_ids)])
 
         values = "\t".join(debug_info)
         return f"{values}\n"
@@ -65,7 +65,7 @@ class Point:
                 keys.extend(["max_eps", "min_eps"])
             keys.extend(["|rk+NN|", "k+NN", "rk+NN"])
         else:
-            keys.extend(["eps_neighbours", "|eps_neighbours|"])
+            keys.extend(["|eps_neighbours|", "eps_neighbours"])
 
         values = "\t".join(keys)
         return f"{values}\n"
