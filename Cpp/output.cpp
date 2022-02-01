@@ -26,7 +26,8 @@ string get_filename_suffix(const boost::program_options::variables_map &vm, int 
     filename_suffix += splitted.at(splitted.size() - 1);
     filename_suffix += "_D" + to_string(dimensions) + "_R" + to_string(point_number);
     if (vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
-        filename_suffix += "_minPts" + to_string(vm[MIN_PTS_PARAM_NAME].as<int>()) + "_e" + to_string(vm[EPS_PARAM_NAME].as<double>());
+        filename_suffix += "_minPts" + to_string(vm[MIN_PTS_PARAM_NAME].as<int>()) + "_e" +
+                           to_string(vm[EPS_PARAM_NAME].as<double>());
     } else {
         filename_suffix += "_k" + to_string(vm[K_PARAM_NAME].as<int>());
     }
@@ -50,7 +51,7 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
     std::ofstream StatsFile(filename);
     Json::Value output;
     Json::Value reference_point_values(Json::arrayValue);
-    for(int i=0; i<stats.dimensions; i++){
+    for (int i = 0; i < stats.dimensions; i++) {
         reference_point_values.append(Json::Value(reference_values[i]));
     }
 
@@ -96,7 +97,7 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
 
 void write_to_debug_file(int point_number, const string &filename, const boost::program_options::variables_map &vm) {
     std::ofstream DebugFile(filename);
-    if(vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
+    if (vm[ALGORITHM_PARAM_NAME].as<string>() == "DBSCAN") {
         DebugFile << "id" << SEPARATOR << "|eps_neighbourhood|" << SEPARATOR << "eps_neighbourhood" << std::endl;
         for (int i = 0; i < point_number; i++) {
             DebugFile << i << SEPARATOR
@@ -107,17 +108,21 @@ void write_to_debug_file(int point_number, const string &filename, const boost::
             }
             DebugFile << "]" << std::endl;
         }
-    }
-    else {
-        DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
-        DebugFile << "[knn]" << SEPARATOR << "[rnn]" << std::endl;
-
+    } else {
+        if (vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
+            DebugFile << "id" << SEPARATOR << "max_eps" << SEPARATOR << "min_eps" << SEPARATOR << "|rnn|" << SEPARATOR;
+            DebugFile << "[knn]" << SEPARATOR << "[rnn]" << std::endl;
+        } else {
+            DebugFile << "id" << SEPARATOR << "|rnn|" << SEPARATOR << "[knn]" << SEPARATOR << "[rnn]" << std::endl;
+        }
 
         for (int i = 0; i < point_number; i++) {
-            DebugFile << i << SEPARATOR
-                      << points.at(i).max_eps << SEPARATOR
-                      << points.at(i).min_eps << SEPARATOR
-                      << points.at(i).rnn.size() << SEPARATOR;
+            DebugFile << i << SEPARATOR;
+            if (vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
+                DebugFile << points.at(i).max_eps << SEPARATOR << points.at(i).min_eps << SEPARATOR;
+            }
+            DebugFile << points.at(i).rnn.size() << SEPARATOR;
+
             DebugFile << "[ ";
             for (int j: points.at(i).knn) {
                 DebugFile << j << " ";
@@ -129,7 +134,9 @@ void write_to_debug_file(int point_number, const string &filename, const boost::
             DebugFile << "]" << std::endl;
         }
     }
+
     DebugFile.close();
+
 }
 
 void write_to_out_file(int point_number, const string &filename) {
@@ -146,8 +153,12 @@ void write_to_out_file(int point_number, const string &filename) {
             OutFile << points.at(i).dimensions.at(j) << SEPARATOR;
         }
         OutFile << points.at(i).distanceCalculationNumber << SEPARATOR
-                << points.at(i).type -1<< SEPARATOR
-                << clusters[i] << std::endl;
+                << points.at(i).type - 1 << SEPARATOR;
+        if (clusters[i] == 0) OutFile << -1 << std::endl;
+        else {
+            OutFile << clusters[i] << std::endl;
+        }
+
     }
     OutFile.close();
 }
