@@ -164,7 +164,7 @@ def run(
         "#_of_pairs": n_pairs,
     }
     if not skip_silhouette:
-        clustering_metrics["silhouette_coefficient"]: silhouette_coefficient(points, m_power)
+        clustering_metrics["silhouette_coefficient"] = silhouette_coefficient(points, m_power)
 
     runtimes["5_stats_calculation"] = (
         time.perf_counter() - metrics_computation_start_time

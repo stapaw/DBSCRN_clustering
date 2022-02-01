@@ -64,6 +64,7 @@ def rand(points: List[Point]) -> Tuple[float, int, int, int]:
 def silhouette_coefficient(points: List[Point], m: float) -> float:
     assert_c_id_set(points)
     dist_fn = distance_fn_generator(m=m)
+
     cluster_id_to_cluster_point_indices = defaultdict(list)
     for idx, point in enumerate(points):
         cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
