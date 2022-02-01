@@ -62,6 +62,13 @@ sys.path.extend(str(Path(__file__).parent))
     is_flag=True,
     help="If set, will plot results and save them in 'output_dir'.",
 )
+@click.option(
+    "--skip_silhouette",
+    type=bool,
+    default=False,
+    is_flag=True,
+    help="If set, will skip calculating silhouette coefficient.",
+)
 def run(
     dataset_path: str,
     output_dir: Path,
@@ -72,6 +79,7 @@ def run(
     min_pts: int,
     eps: float,
     m_power: float,
+    skip_silhouette: bool
 ):
     start_time = time.perf_counter()
     points: List[Point] = load_points(dataset_path)
@@ -154,8 +162,10 @@ def run(
         "TN": tn,
         "TP": tp,
         "#_of_pairs": n_pairs,
-        "silhouette_coefficient": silhouette_coefficient(points, m_power),
     }
+    if not skip_silhouette:
+        clustering_metrics["silhouette_coefficient"]: silhouette_coefficient(points, m_power)
+
     runtimes["5_stats_calculation"] = (
         time.perf_counter() - metrics_computation_start_time
     )
@@ -170,7 +180,7 @@ def run(
             "clustering_stats": clustering_stats,
             "clustering_time[s]": runtimes,
         }
-        json.dump(stat_dict, f, indent=2)
+        json.dump(stat_dict, f, indent=2, sort_keys=True)
 
     if plot:
         plot_out_2d(
