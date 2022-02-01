@@ -1,6 +1,5 @@
 from collections import defaultdict
-
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from scipy.special import comb
 from tqdm import tqdm
@@ -62,11 +61,9 @@ def rand(points: List[Point]) -> Tuple[float, int, int, int]:
     return (tp + tn) / count, tp, tn, count
 
 
-def silhouette_coefficient(
-    points: List[Point], pairwise_distances: Dict[Tuple[int, int], float]
-) -> float:
+def silhouette_coefficient(points: List[Point], m: float) -> float:
     assert_c_id_set(points)
-
+    dist_fn = distance_fn_generator(m=m)
     cluster_id_to_cluster_point_indices = defaultdict(list)
     for idx, point in enumerate(points):
         cluster_id_to_cluster_point_indices[point.cluster_id].append(idx)
@@ -79,7 +76,7 @@ def silhouette_coefficient(
             points[idx].cluster_id = max_cluster_id
             cluster_id_to_cluster_point_indices[max_cluster_id].append(idx)
 
-    silhouette_coefficients = [None for _ in range(len(points))]
+    silhouette_coefficients = [0.0 for _ in range(len(points))]
     for i, point in tqdm(
         enumerate(points),
         desc="Calculating silhouette coefficients...",
@@ -89,11 +86,7 @@ def silhouette_coefficient(
             point.cluster_id
         ]
         same_cluster_point_distances = [
-            pairwise_distances[(i, j)]
-            if (i, j) in pairwise_distances.keys()
-            else pairwise_distances[(j, i)]
-            for j in same_cluster_point_indices
-            if j != i
+            dist_fn(points[i], points[j]) for j in same_cluster_point_indices if j != i
         ]
         if len(same_cluster_point_distances) > 0:  # check for singleton clusters
             a = sum(same_cluster_point_distances) / len(same_cluster_point_distances)
@@ -106,10 +99,7 @@ def silhouette_coefficient(
                 continue
             other_cluster_point_indices = cluster_id_to_cluster_point_indices[c_id]
             other_cluster_point_distances = [
-                pairwise_distances[(i, j)]
-                if (i, j) in pairwise_distances.keys()
-                else pairwise_distances[(j, i)]
-                for j in other_cluster_point_indices
+                dist_fn(points[i], points[j]) for j in other_cluster_point_indices
             ]
             b = sum(other_cluster_point_distances) / len(other_cluster_point_distances)
             b_candidates.append(b)

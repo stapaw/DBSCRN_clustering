@@ -7,9 +7,9 @@ from typing import List
 import click
 from clustering_metrics import davies_bouldin, purity, rand, silhouette_coefficient
 from dbscan import dbscan
-from dbscrn import compute_point_idx_ref_distance_list, dbscrn
+from dbscrn import dbscrn
 from plot import plot_out_2d
-from utils import Point, get_pairwise_distances, load_points
+from utils import Point, load_points
 
 sys.path.extend(str(Path(__file__).parent))
 
@@ -56,13 +56,6 @@ sys.path.extend(str(Path(__file__).parent))
     help="Power used in Minkowsky distance function.",
 )
 @click.option(
-    "--cache",
-    type=bool,
-    default=False,
-    is_flag=True,
-    help="If set, will cache calculated distances for each dataset to speed up computations.",
-)
-@click.option(
     "--plot",
     type=bool,
     default=False,
@@ -79,23 +72,12 @@ def run(
     min_samples: int,
     eps: float,
     m_power: float,
-    cache: bool,
 ):
     start_time = time.perf_counter()
     points: List[Point] = load_points(dataset_path)
     runtimes = {"1_read_input_file": time.perf_counter() - start_time}
 
     dataset_name = Path(dataset_path).stem
-    if cache:
-        raw_distances_cache = (
-            Path(dataset_path).parent / f".{dataset_name}_raw_dist_cache.json"
-        )
-        ref_distances_cache = (
-            Path(dataset_path).parent / f".{dataset_name}_ref_dist_cache.json"
-        )
-    else:
-        raw_distances_cache = None
-        ref_distances_cache = None
 
     main_info = {
         "#_dimensions": len(points[0].vals),
@@ -103,21 +85,10 @@ def run(
         "input_file": str(dataset_path),
     }
 
-    if algorithm == "dbscan" or (algorithm == "dbscrn" and ti is False):
-        point_distance_time, pairwise_distances = get_pairwise_distances(
-            points, m_power, cache=raw_distances_cache
-        )
-        runtimes["2_sort_by_ref_point_distances"] = point_distance_time
-
     if algorithm == "dbscan":
         print(f"Running DBSCAN on {dataset_name}, eps={eps}, minPts={min_samples}")
 
-        alg_runtimes = dbscan(
-            points,
-            pairwise_distances=pairwise_distances,
-            min_samples=min_samples,
-            eps=eps,
-        )
+        alg_runtimes = dbscan(points, min_samples=min_samples, eps=eps, m=m_power)
         output_dir = (
             output_dir
             / "dbscan"
@@ -133,23 +104,16 @@ def run(
     elif algorithm == "dbscrn":
         if ti:
             print(f"Running DBSCRN_TI on {dataset_name}, k={k}")
-            (
-                point_distance_time,
-                ref_point,
-                point_idx_ref_dist,
-            ) = compute_point_idx_ref_distance_list(
-                points, m_power, cache=ref_distances_cache
+            ref_point = Point(
+                id=-1,
+                vals=[
+                    min(p.vals[i] for p in points) for i in range(len(points[0].vals))
+                ],
             )
-            runtimes["2_sort_by_ref_point_distances"] = point_distance_time
-
-            alg_runtimes = dbscrn(
-                points, k=k, m=m_power, point_idx_ref_dist=point_idx_ref_dist
-            )
+            alg_runtimes = dbscrn(points, k=k, m=m_power, ref_point=ref_point)
         else:
             print(f"Running DBSCRN on {dataset_name}, k={k}")
-            alg_runtimes = dbscrn(
-                points, k=k, m=m_power, ti=False, pairwise_distances=pairwise_distances
-            )
+            alg_runtimes = dbscrn(points, k=k, m=m_power, ti=False)
         alg_dir = "dbscrn" if not ti else "dbscrn_ti"
         output_dir = output_dir / alg_dir / dataset_name / f"k_{k}_m_{m_power}"
         main_info["algorithm"] = "DBSCRN"
@@ -183,10 +147,6 @@ def run(
         "avg_#_of_distance_calculation": sum(p.calc_ctr for p in points) / len(points),
     }
     rand_value, tp, tn, n_pairs = rand(points)
-    if ti is True:
-        _, pairwise_distances = get_pairwise_distances(
-            points, m_power, cache=raw_distances_cache
-        )
     clustering_metrics = {
         "Purity": purity(points),
         "davies_bouldin": davies_bouldin(points, m_power),
@@ -194,7 +154,7 @@ def run(
         "TN": tn,
         "TP": tp,
         "#_of_pairs": n_pairs,
-        "silhouette_coefficient": silhouette_coefficient(points, pairwise_distances),
+        "silhouette_coefficient": silhouette_coefficient(points, m_power),
     }
     runtimes["5_stats_calculation"] = (
         time.perf_counter() - metrics_computation_start_time

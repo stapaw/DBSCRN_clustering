@@ -1,26 +1,24 @@
 import time
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List
 
 from tqdm import tqdm
-from utils import Point
+from utils import Point, distance_fn_generator
 
 
 def dbscan(
     points: List[Point],
-    pairwise_distances: Dict[Tuple[int, int], float],
     min_samples: int,
     eps: float,
+    m: float,
 ) -> Dict[str, float]:
     # Account for eps neighbourhood of point containing point
     min_samples -= 1
 
     # Determine core points
     start_time = time.perf_counter()
-    filtered_distances = {
-        idx: dist for idx, dist in pairwise_distances.items() if dist <= eps
-    }
+    dist_fn = distance_fn_generator(m)
     eps_neighbours_indices = [
-        get_eps_neighbour_indices(i, filtered_distances)
+        get_eps_neighbour_indices(i, points, eps, dist_fn)
         for i in tqdm(range(len(points)), desc="Determining eps neighbourhoods...")
     ]
     eps_neighbourhood_assignment_time = time.perf_counter() - start_time
@@ -47,22 +45,22 @@ def dbscan(
     clustering_time = time.perf_counter() - start_time
 
     return {
+        "2_sort_by_ref_point_distances": 0,
         "3_eps_neighborhood/rnn_calculation": eps_neighbourhood_assignment_time,
         "4_clustering": clustering_time,
     }
 
 
 def get_eps_neighbour_indices(
-    root_idx: int, pairwise_distances: Dict[Tuple[int, int], float]
+    root_idx: int,
+    points: List[Point],
+    eps: float,
+    dist_fn: Callable[[Point, Point], float],
 ) -> List[int]:
-    matching_pairs = [
-        indices
-        for indices, distance in pairwise_distances.items()
-        if root_idx in indices
-    ]
     return [
-        indices[0] if indices[0] != root_idx else indices[1]
-        for indices in matching_pairs
+        idx
+        for idx in range(len(points))
+        if (idx != root_idx and dist_fn(points[root_idx], points[idx]) <= eps)
     ]
 
 

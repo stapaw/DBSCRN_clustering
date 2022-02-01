@@ -1,11 +1,7 @@
-import json
-import time
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Union
 
 import seaborn as sns
-from tqdm import tqdm
 
 sns.set_style("darkgrid")
 
@@ -100,42 +96,3 @@ def distance_fn_generator(m: float) -> Callable[[Point, Point], float]:
         )
 
     return distance
-
-
-def get_pairwise_distances(
-    points: List[Point],
-    m: float = 2,
-    verbose: bool = True,
-    cache: Optional[Path] = None,
-) -> Tuple[float, Dict[Tuple[int, int], float]]:
-    start_time = time.perf_counter()
-    if cache is not None and cache.exists():
-        with cache.open("r") as f:
-            json_distances = json.load(f)
-            distances = {
-                (int(str_keys.split(",")[0]), int(str_keys.split(",")[1])): dist
-                for str_keys, dist in json_distances.items()
-            }
-
-    if cache is None or not cache.exists():
-        dist_fn = distance_fn_generator(m)
-        iterator = range(len(points))
-        if verbose:
-            iterator = tqdm(iterator, desc="Calculating pairwise distances...")
-        distances = {
-            (i, j): dist_fn(points[i], points[j])
-            for i in iterator
-            for j in range(i + 1, len(points))
-        }
-
-    point_distance_time = time.perf_counter() - start_time
-    if cache is not None and not cache.exists():
-        with cache.open("w+") as f:
-            cache.parent.mkdir(parents=True, exist_ok=True)
-            json_distances = {
-                f"{indices_tuple[0]},{indices_tuple[1]}": round(dist, 3)
-                for indices_tuple, dist in distances.items()
-            }
-            json.dump(json_distances, f, indent=2)
-
-    return point_distance_time, distances
