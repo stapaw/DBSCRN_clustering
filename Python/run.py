@@ -49,7 +49,6 @@ sys.path.extend(str(Path(__file__).parent))
 )
 @click.option("-e", "--eps", type=float, default=2.0, help="'eps' DBSCAN parameter.")
 @click.option(
-    "-p",
     "--m_power",
     type=float,
     default=2.0,
