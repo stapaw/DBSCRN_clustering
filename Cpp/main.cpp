@@ -41,10 +41,10 @@ int main(int argc, char *argv[]) {
             (EPS_PARAM_NAME, po::value<double>()->default_value(2), "eps parameter for DBSCAN")
             (MIN_PTS_PARAM_NAME, po::value<int>()->default_value(4), "minPts parameter for DBSCAN")
             (MINKOWSKI_PARAM_NAME, po::value<int>()->default_value(2), "Minkowski distance power")
-            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(true),
+            (TI_OPTIMIZED_PARAM_NAME, po::value<bool>()->default_value(false),
              "If true, TI optimized calculations are enabled (true|false)")
-            (CALC_SILHOUETTE_PARAM_NAME, po::value<bool>()->default_value(true),
-             "If true, silhouette coefficient calculations are enabled (true|false)");
+            (SKIP_SILHOUETTE_PARAM_NAME, po::value<bool>()->default_value(false),
+             "If true, silhouette coefficient calculations are skipped (true|false)");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
 
     string filename_suffix = get_filename_suffix(vm, point_number, dimensions);
-    write_to_debug_file(point_number, "DEBUG" + filename_suffix, vm);
+    write_to_debug_file(point_number, "DEBUG" + filename_suffix + ".csv", vm);
 
     double avg_distance_calculation_number = 0;
     int point_types[3] = {0};
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
     stats.border_points = point_types[border];
     stats.noise_points = point_types[noise];
 
-    write_to_out_file(point_number, "OUT" + filename_suffix);
+    write_to_out_file(point_number, "OUT" + filename_suffix + ".csv");
 
 
     vector<int> ground_truth;
@@ -158,17 +158,15 @@ int main(int argc, char *argv[]) {
 
     stats = calculate_ground_truth_stats(stats, point_number, ground_truth);
     stats.davies_bouldin = calculate_davies_bouldin(stats);
-    if (vm[CALC_SILHOUETTE_PARAM_NAME].as<bool>())
+    if (!vm[SKIP_SILHOUETTE_PARAM_NAME].as<bool>())
         stats.silhouette = calculate_silhouette(point_number, stats);
-
-
 
 
     last_checkpoint_time = save_checkpoint_time(last_checkpoint_time, clock(), stats);
     stats.time_diffs.push_back(get_time_in_sec(start_time, last_checkpoint_time)); // total
     int index = stats.time_diffs.size() - 1;
     cout << clock_phases[index]  << " " << stats.time_diffs.at(index);
-    write_to_stats_file(stats, vm, "STAT" + filename_suffix);
+    write_to_stats_file(stats, vm, "STAT" + filename_suffix + ".json");
 }
 
 clock_t save_checkpoint_time(clock_t from, clock_t to, stats &stats) {

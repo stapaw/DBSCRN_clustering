@@ -21,11 +21,11 @@ static const char *const clock_phases[] = {
 
 static const char *const K_PARAM_NAME = "k";
 static const char *const EPS_PARAM_NAME = "eps";
-static const char *const MIN_PTS_PARAM_NAME = "minPts";
+static const char *const MIN_PTS_PARAM_NAME = "min_pts";
 static const char *const ALGORITHM_PARAM_NAME = "algorithm";
 static const char *const INPUT_FILE_PARAM_NAME = "input_file";
 static const char *const MINKOWSKI_PARAM_NAME = "minkowski_power";
-static const char *const TI_OPTIMIZED_PARAM_NAME = "TI_optimized";
+static const char *const TI_OPTIMIZED_PARAM_NAME = "ti";
 static const char *const LABELS_FILE_PARAM_NAME = "ground_truth_file";
-static const char *const CALC_SILHOUETTE_PARAM_NAME = "silhouette";
+static const char *const SKIP_SILHOUETTE_PARAM_NAME = "skip_silhouette";
 #endif //CLUSTERING_SETTINGS_H

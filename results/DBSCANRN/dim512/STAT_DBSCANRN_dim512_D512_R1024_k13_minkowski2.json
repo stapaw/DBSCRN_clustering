@@ -1,0 +1,42 @@
+{
+	"#main" : 
+	{
+		"#_dimensions" : 512,
+		"#_points" : 1024,
+		"algorithm" : "DBSCANRN",
+		"input_file" : "../datasets/points/dim512.tsv"
+	},
+	"#parameters" : 
+	{
+		"k" : 13,
+		"minkowski_power" : 2,
+		"ti" : false
+	},
+	"clustering_metrics" : 
+	{
+		"#_of_pairs" : 523776,
+		"Purity" : 1.0,
+		"RAND" : 1.0,
+		"TN" : 491520,
+		"TP" : 32256,
+		"davies_bouldin" : 0.020462202122130041,
+		"silhouette_coefficient" : 0.98669047136107946
+	},
+	"clustering_stats" : 
+	{
+		"#_border_points" : 783,
+		"#_clusters" : 16,
+		"#_core_points" : 241,
+		"#_noise_points" : 0,
+		"avg_#_of_distance_calculation" : 1023.0
+	},
+	"clustering_time (in seconds)" : 
+	{
+		"1_read_input_file" : 0.079669000000000004,
+		"2_sort_by_ref_point_distances" : 0.0,
+		"3_eps_neighborhood/rnn_calculation" : 15.029101000000001,
+		"4_clustering" : 0.001199,
+		"5_stats_calculation" : 14.854225,
+		"total_runtime" : 29.964193999999999
+	}
+}
