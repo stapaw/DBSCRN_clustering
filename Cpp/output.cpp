@@ -32,7 +32,10 @@ string get_filename_suffix(const boost::program_options::variables_map &vm, int 
         filename_suffix += "_k" + to_string(vm[K_PARAM_NAME].as<int>());
     }
     filename_suffix += "_minkowski" + to_string(vm[MINKOWSKI_PARAM_NAME].as<int>());
-    filename_suffix += "_refMin.csv";
+    if(vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()){
+        filename_suffix += "_refMin";
+    }
+
     return filename_suffix;
 }
 
@@ -68,7 +71,9 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
     }
     output[STATS_PARAMETERS][MINKOWSKI_PARAM_NAME] = vm[MINKOWSKI_PARAM_NAME].as<int>();
     output[STATS_PARAMETERS][TI_OPTIMIZED_PARAM_NAME] = vm[TI_OPTIMIZED_PARAM_NAME].as<bool>();
-    output[STATS_PARAMETERS]["reference_point_values"] = reference_point_values;
+    if(vm[TI_OPTIMIZED_PARAM_NAME].as<bool>()) {
+        output[STATS_PARAMETERS]["reference_point_values"] = reference_point_values;
+    }
 
 
     output[STATS_CLUSTERING_STATS]["#_clusters"] = stats.cluster_number;
@@ -81,7 +86,7 @@ write_to_stats_file(stats stats, const boost::program_options::variables_map &vm
     int number_of_phases = stats.time_diffs.size();
     for (int i = 0; i < number_of_phases; i++)
         output[STATS_CLUSTERING_TIME][clock_phases[i]] = stats.time_diffs.at(i);
-    if (vm[CALC_SILHOUETTE_PARAM_NAME].as<bool>())
+    if (!vm[SKIP_SILHOUETTE_PARAM_NAME].as<bool>())
         output[STATS_CLUSTERING_METRICS]["silhouette_coefficient"] = stats.silhouette;
     output[STATS_CLUSTERING_METRICS]["davies_bouldin"] = stats.davies_bouldin;
     // if real cluster known
